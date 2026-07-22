@@ -35,14 +35,28 @@ compose exec -T postgres_test \
         -d "$DB" \
         -c "ALTER ROLE migrator PASSWORD 'test';"
 
-for migration in migrations/[0-9][0-9][0-9]_*.sql; do
-    [ -f "$migration" ] || {
-        echo "Keine Migrationen gefunden." >&2
+# Migrationen und Projektkonfiguration in expliziter Reihenfolge: project/
+# ergänzt jeweils die vorangehende Kernmigration um Pages-PM-spezifische
+# Konfiguration (Sprachen, Objektarten, Beziehungsarten). Die Reihenfolge über
+# beide Verzeichnisse hinweg lässt sich nicht aus den Dateinamen allein
+# ableiten, deshalb hier ausdrücklich aufgeführt statt per Glob ermittelt.
+set -- \
+    migrations/002_languages.sql \
+    project/001_languages.sql \
+    migrations/003_object_registry.sql \
+    project/002_object_types.sql \
+    migrations/004_areas.sql \
+    migrations/005_object_origins.sql \
+    migrations/006_relation_types.sql \
+    project/003_relation_types.sql \
+    migrations/007_object_relations.sql
+
+for entry do
+    [ -f "$entry" ] || {
+        echo "Datei nicht gefunden: $entry" >&2
         exit 1
     }
-    name=$(basename "$migration")
-    [ "$name" = "001_bootstrap.sql" ] && continue
-    echo "  $name"
+    echo "  $entry"
     compose exec -T \
         -e PGPASSWORD=test \
         postgres_test \
@@ -50,7 +64,7 @@ for migration in migrations/[0-9][0-9][0-9]_*.sql; do
             -v ON_ERROR_STOP=1 \
             -U migrator \
             -d "$DB" \
-            -f "/migrations/$name"
+            -f "/$entry"
 done
 
 echo "Richte pgTAP ein..."

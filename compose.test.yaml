@@ -15,6 +15,7 @@ services:
       - /var/lib/postgresql
     volumes:
       - ./migrations:/migrations:ro
+      - ./project:/project:ro
       - ./tests/sql:/tests:ro
     stop_grace_period: 10s
     healthcheck:

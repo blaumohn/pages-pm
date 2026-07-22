@@ -6,15 +6,17 @@
 -- (007_object_relations.sql) Einträge zulässt. Sonst entsteht ein mehrdeutiges
 -- Netz (z. B. "references" und "derived_from" austauschbar für denselben Fall).
 --
--- Anfänglicher Satz bewusst klein gehalten: derived_from, implements,
--- supersedes, references. "assigned_to" und "documents" sind ausdrücklich
--- NICHT hier vertreten — assigned_to gehört als klarer Fremdschlüssel in die
--- jeweilige Fachtabelle (z. B. pm.issues.sprint_id), "documents" ist zu
--- mehrdeutig und wird erst bei einem echten Anwendungsfall präzisiert.
+-- Diese Kernmigration legt nur Struktur und Prüfungen fest, jedoch keine
+-- konkreten Beziehungsarten. Diese gehören zur konkreten Pages-PM-
+-- Installation, nicht zum Kernschema, und werden nach dieser Migration durch
+-- project/003_relation_types.sql ergänzt. Dort steht auch die Begründung für
+-- die vier anfänglichen Beziehungsarten derived_from, implements, supersedes
+-- und references sowie für den Ausschluss von assigned_to und documents.
 --
--- Richtung von derived_from: Quellobjekt → Zielobjekt bedeutet "Quellobjekt
--- wurde fachlich aus Zielobjekt abgeleitet" (Beispiel: KEP-lite --derived_from--> Vorgang,
--- der Vorgang ist die Grundlage, das KEP-lite das daraus abgeleitete Objekt).
+-- source_type und target_type in pm.relation_type_endpoints verweisen auf
+-- pm.object_types.key statt auf ein PostgreSQL-Enum. Das entspricht
+-- 003_object_registry.sql, wo Objektarten ebenfalls in einer Tabelle geführt
+-- werden.
 
 SET ROLE schema_owner;
 
@@ -116,8 +118,12 @@ CREATE TABLE pm.relation_type_endpoints (
     relation_type          text NOT NULL
         REFERENCES pm.relation_types(key)
         ON DELETE CASCADE,
-    source_type            pm.object_type NOT NULL,
-    target_type            pm.object_type NOT NULL,
+    source_type            text NOT NULL
+        REFERENCES pm.object_types(key)
+        ON DELETE RESTRICT,
+    target_type            text NOT NULL
+        REFERENCES pm.object_types(key)
+        ON DELETE RESTRICT,
     max_targets_per_source integer,
     max_sources_per_target integer,
 
@@ -137,58 +143,22 @@ COMMENT ON COLUMN pm.relation_type_endpoints.max_targets_per_source IS
 COMMENT ON COLUMN pm.relation_type_endpoints.max_sources_per_target IS
     'Höchste Zahl von Quellen je Zielobjekt innerhalb GENAU dieser Typkombination; NULL = unbegrenzt.';
 
-INSERT INTO pm.relation_types (
-    key,
-    title,
-    description,
-    description_required,
-    acyclic
-) VALUES
-    (
-        'derived_from',
-        '{"de": "abgeleitet von", "en": "derived from"}'::jsonb,
-        '{
-            "de": "Das Quellobjekt wurde fachlich aus dem Zielobjekt abgeleitet.",
-            "en": "The source object was derived from the target object."
-        }'::jsonb,
-        false, true
-    ),
-    (
-        'implements',
-        '{"de": "setzt um", "en": "implements"}'::jsonb,
-        '{
-            "de": "Das Quellobjekt setzt Anforderungen oder Entscheidungen des Zielobjekts um.",
-            "en": "The source object implements requirements or decisions of the target object."
-        }'::jsonb,
-        false, false
-    ),
-    (
-        'supersedes',
-        '{"de": "ersetzt", "en": "supersedes"}'::jsonb,
-        '{
-            "de": "Das Quellobjekt ersetzt das Zielobjekt fachlich.",
-            "en": "The source object supersedes the target object."
-        }'::jsonb,
-        true, true
-    ),
-    (
-        'references',
-        '{"de": "verweist auf", "en": "references"}'::jsonb,
-        '{
-            "de": "Das Quellobjekt verweist informativ auf das Zielobjekt, ohne eine stärkere fachliche Aussage. Diese Beziehungsart darf nur verwendet werden, wenn keine genauere Beziehungsart passt.",
-            "en": "The source object informatively references the target object without making a stronger claim. Use this relation type only when no more specific relation type applies."
-        }'::jsonb,
-        true, false
-    );
+-- Keine Beziehungsarten in dieser Kernmigration — siehe
+-- project/003_relation_types.sql.
 
 -- Beide Tabellen enthalten verwaltete Konfiguration wie pm.languages und
--- pm.areas. build darf sie lesen; das ist auch für die Trigger-Prüfungen in
--- 007_object_relations.sql erforderlich.
---
--- Neue Beziehungsarten und Endpunktregeln legt migrator beziehungsweise
--- schema_owner an.
+-- pm.areas. migrator legt Beziehungsarten und Endpunktregeln an, ändert
+-- und löscht sie. editor und reader dürfen beide Tabellen nur lesen.
+-- pm.enforce_object_relation_rules() (007_object_relations.sql) ist nicht
+-- SECURITY DEFINER und läuft daher mit den Rechten des aufrufenden Benutzers
+-- — editor braucht das Leserecht deshalb auch für die Trigger-Prüfung dort,
+-- nicht nur für eigene Abfragen.
+GRANT SELECT, INSERT, UPDATE, DELETE
+    ON pm.relation_types, pm.relation_type_endpoints
+    TO migrator;
+
 GRANT SELECT
     ON pm.relation_types, pm.relation_type_endpoints
-    TO build;
+    TO editor, reader;
 
 RESET ROLE;

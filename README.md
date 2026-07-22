@@ -9,52 +9,94 @@ Projektverwaltung.
 
 ## Status
 
-Früher Entwicklungsstand. Das getestete relationale Fundament ist
-umgesetzt; Fachtabellen (Sprints, Vorgänge, ADRs, ...) und
-Anwendungsschnittstellen sind noch nicht fertig.
+Das getestete relationale Fundament für Sprachen, Objektregistrierung,
+Bereiche, externe Migrationsherkünfte und typisierte Beziehungen ist auf
+Grundlage des endgültigen Registermodells umgesetzt.
+
+Der nächste betriebliche Meilenstein ist die Verwaltung der Entwicklung von
+Pages PM selbst: aktuelle Sprints, Vorgänge und die unmittelbar benötigten
+Dokumentvorlagen werden als Fachtabellen umgesetzt und mit realen
+Projektdaten verwendet.
+
+Darauf folgt ein kleiner Python-Renderer, der eine deterministische
+Markdown-Ausgabe für GitHub Pages erzeugt.
+
+PostgREST, eine Weboberfläche und eine allgemeine Schreib-API sind nicht Teil
+des MVP.
 
 ## Motivation
 
-Projektverwaltungsdaten (Vorgänge, Sprints, Entscheidungsdokumente,
-Runbooks, ...) werden als striktes relationales Fachmodell in PostgreSQL
-dargestellt. Constraints, Trigger und Rollen erzwingen Integrität, statt
-sich auf handgeschriebenen Validierungscode in einer Anwendungsschicht zu
-verlassen. Eine spätere Projektionsschicht kann die geprüften Daten als
-git-versionierten Text darstellen, zum Beispiel für GitHub Pages.
+Pages PM bildet Projektverwaltungsdaten in geprüften PostgreSQL-Fachtabellen
+ab. Jede fachliche Objektart besitzt eine eigene Fachtabelle mit
+ausdrücklichen Spalten, Constraints und fachlichen Regeln. Gemeinsame
+Beziehungen, Bereiche und externe Herkünfte verwenden ein automatisch
+gepflegtes Objektregister. Historische Inhalte werden nur bei Bedarf
+normalisiert; PostgreSQL bleibt die maßgebliche Datenquelle.
+
+## Begriffe
+
+Drei unterschiedliche Vorgänge müssen unterschieden werden:
+
+```
+SQL-Migration
+    verändert das wiederverwendbare Datenbankschema und seine Regeln
+    (migrations/)
+
+Projektkonfiguration
+    registriert die konkreten Sprachen, Objektarten und Beziehungsarten
+    der Pages-PM-Installation (project/)
+
+Inhaltsmigration beziehungsweise Import
+    normalisiert eine externe Archiveinheit zu einem internen Objekt
+    (pm.object_origins)
+```
 
 ## Aktueller Umfang
 
 | Migration | Zweck |
 |---|---|
-| `001_bootstrap.sql` | Rollen (`schema_owner`, `migrator`, `build`, `pages_renderer`, `backup`), Schemas, Migrationsverzeichnis |
+| `001_bootstrap.sql` | Rollen (`schema_owner`, `migrator`, `editor`, `reader`), Schemas, Migrationsverzeichnis |
 | `002_languages.sql` | Sprachkonfiguration + zentrale Sprachkarten-Prüfung |
-| `003_objects.sql` | Gemeinsame Objektidentität (`pm.objects`), Objektarten |
+| `003_object_registry.sql` | Objektarten (`pm.object_types`), technisches Register (`pm.object_registry`), Registrierungsfunktionen |
 | `004_areas.sql` | Verwaltete Klassifikationsbereiche, Mehrfachzuordnung |
-| `005_object_origins.sql` | Externe Migrationsherkunft |
+| `005_object_origins.sql` | Zuordnung mehrerer externer Archiveinheiten zu einem normalisierten Objekt |
 | `006_relation_types.sql` | Definition von Beziehungsarten + zulässige Endpunktkombinationen |
 | `007_object_relations.sql` | Geprüfte typisierte Beziehungen zwischen Objekten (Kardinalität, Zyklen, Beschreibungen) |
 
-Noch nicht umgesetzt: Fachtabellen (Sprint, Vorgang, Dokumentvorlagen),
-eine Schreib-API, eine Anwendungs-/PostgREST-Schicht, die Git-/Text-
-Projektion, produktionsreife Rollen- und Nebenläufigkeitstests, eine
-Benutzeroberfläche.
+`project/` ergänzt die konkrete Pages-PM-Installation um Sprachen,
+Objektarten und Beziehungsarten (siehe Abschnitt „Begriffe“).
+
+Noch nicht umgesetzt: Fachtabellen (Sprint, Vorgang und zunächst benötigte
+Dokumentvorlagen), die gemeinsame `pm.objects`-Lesesicht sowie der
+Python-Renderer. Eine allgemeine Schreib-API, PostgREST und eine
+Benutzeroberfläche sind erst für einen späteren Ausbau vorgesehen.
 
 ## Architektur
 
 ```
-PostgreSQL (aktuell maßgebliche Datenquelle)
-├── Rollen: schema_owner (NOLOGIN), migrator, build, pages_renderer, backup
-├── Schemas, Constraints und Trigger erzwingen die fachliche Integrität
-└── geplante Publikations-Views liefern eine reine Lese-Projektion
+PostgreSQL
+├── Fachtabellen sind die maßgeblichen Objekte (noch nicht umgesetzt)
+│   ├── pm.sprints
+│   ├── pm.issues
+│   ├── pm.kep_lites
+│   └── weitere Vorlagen
+├── pm.object_registry
+│   └── automatisch gepflegte gemeinsame UUID- und Typregistrierung
+├── gemeinsame Regeln
+│   ├── Sprachen
+│   ├── Bereiche
+│   ├── Migrationsherkünfte
+│   └── typisierte Beziehungen
+└── pm.objects (noch nicht umgesetzt)
+    └── gemeinsame Lesesicht über die Fachtabellen
 
-Anwendungsschicht (dünn, noch nicht gebaut)
-├── Renderer — wählt veröffentlichbare Daten aus und erzeugt
-│              statische Markdown-/HTML-Seiten für GitHub Pages
-├── CLI/API — zunächst eingeschränkte DML-Rechte über die Rolle build
-│             (Tabelle für Tabelle einzeln vergeben, keine Pauschalrechte);
-│             später kontrollierte Schreibzugriffe über Datenbankfunktionen
-└── Repository-Integration — verknüpft Vorgänge mit Commits, Dateien,
-                             Symbolen und weiteren Implementierungsartefakten
+Bearbeitung
+├── editor verwendet unmittelbares, rollenbegrenztes SQL
+├── mehrteilige Aufträge laufen in einer Transaktion
+└── Constraints, Fremdschlüssel und Trigger erzwingen Integrität
+
+Veröffentlichung (noch nicht umgesetzt)
+└── Python-Renderer liest als reader und erzeugt Markdown für GitHub Pages
 ```
 
 Die erste Umsetzung verwendet PostgreSQL als maßgebliche Datenquelle. Ein
@@ -82,6 +124,7 @@ danach vollständig auf.
 
 ```
 migrations/       versionierte SQL-Migrationen (001_bootstrap.sql, 002_..., ...)
+project/          Pages-PM-spezifische Projektkonfiguration (Sprachen, Objektarten, Beziehungsarten)
 tests/sql/        pgTAP-Tests, gruppiert nach betroffener Migration/Teilsystem
 docker/           reines Test-Abbild Postgres+pgTAP
 scripts/          test-sql.sh (automatisierter Testlauf)
@@ -91,10 +134,15 @@ compose.test.yaml Wegwerf-Testdatenbank
 
 ## Roadmap
 
-- Sprints, Vorgänge und weitere vorlagenbasierte Dokumenttabellen
-- Rollen-/Rechte- und Nebenläufigkeitstests (pytest + psycopg)
-- eine dünne Schreib-API über kontrollierte Datenbankfunktionen
-- Git-/Text-Projektion für GitHub Pages
+1. erster betriebsfähiger Fachkern aus Sprint, Vorgang und einer
+   Dokumentvorlage samt `pm.objects`-Lesesicht
+2. kleiner SQL-Einstiegswrapper (`scripts/write-sql.sh`): Verbindung als
+   `editor`, `ON_ERROR_STOP` und transaktionale Ausführung eines SQL-Skripts
+3. gegenwärtige Projektarbeit direkt in Pages PM
+4. bedarfsgesteuerte Migration historischer Inhalte
+5. minimaler Python-Renderer für GitHub Pages
+6. Rollen-, Rechte- und Nebenläufigkeitstests mit pytest und psycopg
+7. Härtung anhand der realen Nutzung
 
 ## Lizenz
 

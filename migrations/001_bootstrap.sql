@@ -22,15 +22,11 @@ GRANT schema_owner TO migrator
 GRANT schema_owner TO migrator
     WITH ADMIN FALSE;
 
-CREATE ROLE build
+CREATE ROLE editor
     LOGIN
     NOINHERIT;
 
-CREATE ROLE pages_renderer
-    LOGIN
-    NOINHERIT;
-
-CREATE ROLE backup
+CREATE ROLE reader
     LOGIN
     NOINHERIT;
 
@@ -45,12 +41,15 @@ CREATE SCHEMA pm_meta
 -- weiter, auch wenn Pages PM dieses Schema fachlich nicht verwendet).
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 
--- build arbeitet in pm (nur über Funktionen, siehe spätere Migration).
--- backup braucht Lesezugriff auf die echten Tabellen für pg_dump.
--- pages_renderer bekommt bewusst KEIN USAGE auf pm — nur später auf ein
--- eigenes "published"-Schema (eigene Migration, sobald Views existieren).
-GRANT USAGE ON SCHEMA pm TO build, backup;
-GRANT USAGE ON SCHEMA pm_meta TO migrator, backup;
+-- editor bearbeitet Projektinhalte, reader liest sie. migrator verwaltet
+-- Fachkonfiguration (Sprachen, Objektarten, Beziehungsarten, Bereiche)
+-- unmittelbar über eigene Tabellenrechte, nicht nur über SET ROLE
+-- schema_owner — project/*.sql läuft direkt als migrator und braucht daher
+-- ebenfalls USAGE auf pm. Die Tabellenrechte selbst werden jeweils in der
+-- zuständigen Migration ausdrücklich vergeben. Nur migrator benötigt Zugriff
+-- auf pm_meta.schema_migrations.
+GRANT USAGE ON SCHEMA pm TO migrator, editor, reader;
+GRANT USAGE ON SCHEMA pm_meta TO migrator;
 
 SET ROLE schema_owner;
 
@@ -63,10 +62,9 @@ CREATE TABLE pm_meta.schema_migrations (
 
 RESET ROLE;
 
-GRANT SELECT ON pm_meta.schema_migrations TO migrator, backup;
+GRANT SELECT ON pm_meta.schema_migrations TO migrator;
 
 -- Passwörter danach interaktiv setzen, nicht versioniert:
 --   \password migrator
---   \password build
---   \password pages_renderer
---   \password backup
+--   \password editor
+--   \password reader

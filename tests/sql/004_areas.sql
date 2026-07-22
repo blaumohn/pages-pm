@@ -1,8 +1,30 @@
 BEGIN;
-SELECT plan(12);
+SELECT plan(15);
 
 SELECT has_table('pm', 'areas', 'pm.areas existiert');
 SELECT has_table('pm', 'object_areas', 'pm.object_areas existiert');
+
+-- Isolierte Prüfumgebung: eigene künstliche Objektart/Fachtabelle, unabhängig
+-- von project/002_object_types.sql und von jeder anderen Testdatei.
+DROP SCHEMA IF EXISTS pm_test CASCADE;
+CREATE SCHEMA pm_test;
+
+CREATE TABLE pm_test.widgets (
+    id uuid PRIMARY KEY
+);
+
+INSERT INTO pm.object_types (key, table_name) VALUES
+    ('widget', 'pm_test.widgets'::regclass);
+
+CREATE TRIGGER widgets_register_object
+    AFTER INSERT ON pm_test.widgets
+    FOR EACH ROW
+    EXECUTE FUNCTION pm.register_object('widget');
+
+CREATE TRIGGER widgets_deregister_object
+    BEFORE DELETE ON pm_test.widgets
+    FOR EACH ROW
+    EXECUTE FUNCTION pm.deregister_object('widget');
 
 SELECT lives_ok(
     $$ INSERT INTO pm.areas (key, title, description)
@@ -50,16 +72,23 @@ SELECT throws_ok(
     'id ist nach Anlage unveränderlich'
 );
 
--- Zuordnung + Löschschutz
+-- Zuordnung + Löschschutz. Feste UUID statt dynamisch erzeugter id, damit
+-- die spätere Löschprüfung genau dieses eine Fachobjekt trifft, unabhängig
+-- von später ergänzten Prüfdaten.
+INSERT INTO pm_test.widgets (id) VALUES ('00000000-0000-0000-0000-000000000001');
+
 SELECT lives_ok(
-    $$ WITH o AS (
-           INSERT INTO pm.objects (object_type, title)
-           VALUES ('issue', '{"de": "Zugeordnetes Issue", "en": "Assigned issue"}'::jsonb)
-           RETURNING id
-       )
-       INSERT INTO pm.object_areas (object_id, area_id)
-       SELECT o.id, a.id FROM o, pm.areas a WHERE a.key = 'build' $$,
+    $$ INSERT INTO pm.object_areas (object_id, area_id)
+       SELECT '00000000-0000-0000-0000-000000000001', a.id
+       FROM pm.areas a WHERE a.key = 'build' $$,
     'Objekt kann einem Bereich zugeordnet werden'
+);
+
+SELECT is(
+    (SELECT count(*) FROM pm.object_areas
+      WHERE object_id = '00000000-0000-0000-0000-000000000001'),
+    1::bigint,
+    'genau eine Bereichszuordnung wurde angelegt'
 );
 
 SELECT lives_ok(
@@ -91,6 +120,21 @@ SELECT throws_ok(
     '23001',
     NULL,
     'Bereich mit bestehender Zuordnung kann nicht gelöscht werden'
+);
+
+-- Löschen des Fachobjekts entfernt dessen Bereichszuordnungen automatisch
+-- (die Zuordnung selbst blockiert dabei nicht die Objektlöschung).
+SELECT lives_ok(
+    $$ DELETE FROM pm_test.widgets
+       WHERE id = '00000000-0000-0000-0000-000000000001' $$,
+    'Löschen des zugeordneten Fachobjekts gelingt trotz Bereichszuordnung'
+);
+
+SELECT is(
+    (SELECT count(*) FROM pm.object_areas
+      WHERE object_id = '00000000-0000-0000-0000-000000000001'),
+    0::bigint,
+    'Bereichszuordnungen des gelöschten Objekts sind automatisch verschwunden'
 );
 
 SELECT * FROM finish();

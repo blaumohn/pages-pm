@@ -101,7 +101,7 @@ CREATE TRIGGER areas_prevent_identity_change
 
 CREATE TABLE pm.object_areas (
     object_id uuid NOT NULL
-        REFERENCES pm.objects(id)
+        REFERENCES pm.object_registry(id)
         ON DELETE CASCADE,
 
     area_id   uuid NOT NULL
@@ -115,20 +115,30 @@ COMMENT ON TABLE pm.object_areas IS
     'Mehrfachzuordnung fachlicher Objekte zu Bereichen. Der zusammengesetzte '
     'Primärschlüssel verhindert doppelte Zuordnungen.';
 
--- pm.areas ist verwaltete Klassifikation wie pm.languages und
--- pm.relation_types: build darf lesen; neue Bereiche legt
--- migrator beziehungsweise schema_owner an.
+-- pm.areas ist eine verwaltete Klassifikation wie pm.languages und
+-- pm.relation_types: migrator legt Bereiche an, ändert und löscht sie;
+-- editor und reader dürfen sie nur lesen. Dadurch kann editor nicht
+-- ungeplant neue Bereiche erzeugen.
 --
 -- pm.object_areas enthält die eigentlichen fachlichen Zuordnungen. Kein
 -- UPDATE: der zusammengesetzte Primärschlüssel (object_id, area_id) ist die
 -- einzige Information der Tabelle — eine geänderte Zuordnung ist fachlich
--- DELETE+INSERT, nicht Bearbeitung.
+-- DELETE+INSERT, nicht Bearbeitung. editor darf Objekte Bereichen zuordnen
+-- und die Zuordnung wieder entfernen.
+GRANT SELECT, INSERT, UPDATE, DELETE
+    ON pm.areas
+    TO migrator;
+
 GRANT SELECT
     ON pm.areas
-    TO build;
+    TO editor, reader;
 
 GRANT SELECT, INSERT, DELETE
     ON pm.object_areas
-    TO build;
+    TO editor;
+
+GRANT SELECT
+    ON pm.object_areas
+    TO reader;
 
 RESET ROLE;

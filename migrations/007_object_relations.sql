@@ -5,17 +5,23 @@
 -- Der zusammengesetzte Primärschlüssel lässt mehrere Beziehungsarten
 -- zwischen denselben zwei Objekten zu (z. B. A --references--> B UND
 -- A --implements--> B), aber jede Kombination (source, target, Art) nur einmal.
+--
+-- source_id/target_id verweisen auf pm.object_registry statt auf das frühere
+-- pm.objects (siehe 003_object_registry.sql) und verwenden bewusst
+-- ON DELETE RESTRICT statt CASCADE: Eine Beziehung soll beim Löschen eines
+-- beteiligten Objekts nicht still verschwinden, sondern die Löschung
+-- blockieren, bis die Beziehung ausdrücklich entfernt wurde.
 
 SET ROLE schema_owner;
 
 CREATE TABLE pm.object_relations (
     source_id     uuid NOT NULL
-        REFERENCES pm.objects(id)
-        ON DELETE CASCADE,
+        REFERENCES pm.object_registry(id)
+        ON DELETE RESTRICT,
 
     target_id     uuid NOT NULL
-        REFERENCES pm.objects(id)
-        ON DELETE CASCADE,
+        REFERENCES pm.object_registry(id)
+        ON DELETE RESTRICT,
 
     relation_type text NOT NULL
         REFERENCES pm.relation_types(key)
@@ -130,8 +136,8 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_source_type       pm.object_type;
-    v_target_type       pm.object_type;
+    v_source_type       text;
+    v_target_type       text;
     v_relation          pm.relation_types%ROWTYPE;
     v_endpoint          pm.relation_type_endpoints%ROWTYPE;
     v_target_count      integer;
@@ -176,15 +182,21 @@ BEGIN
         v_excluded_relation_type := OLD.relation_type;
     END IF;
 
-    SELECT object_type INTO v_source_type FROM pm.objects WHERE id = NEW.source_id;
+    SELECT r.object_type
+      INTO v_source_type
+      FROM pm.object_registry AS r
+     WHERE r.id = NEW.source_id;
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Keine Grundzeile in pm.objects für source_id=%', NEW.source_id
+        RAISE EXCEPTION 'Keine Registerzeile in pm.object_registry für source_id=%', NEW.source_id
             USING ERRCODE = '23503';
     END IF;
 
-    SELECT object_type INTO v_target_type FROM pm.objects WHERE id = NEW.target_id;
+    SELECT r.object_type
+      INTO v_target_type
+      FROM pm.object_registry AS r
+     WHERE r.id = NEW.target_id;
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Keine Grundzeile in pm.objects für target_id=%', NEW.target_id
+        RAISE EXCEPTION 'Keine Registerzeile in pm.object_registry für target_id=%', NEW.target_id
             USING ERRCODE = '23503';
     END IF;
 
@@ -223,7 +235,7 @@ BEGIN
     IF v_endpoint.max_targets_per_source IS NOT NULL THEN
         SELECT count(*) INTO v_target_count
           FROM pm.object_relations r
-          JOIN pm.objects o ON o.id = r.target_id
+          JOIN pm.object_registry o ON o.id = r.target_id
          WHERE r.source_id = NEW.source_id
            AND r.relation_type = NEW.relation_type
            AND o.object_type = v_target_type
@@ -246,7 +258,7 @@ BEGIN
     IF v_endpoint.max_sources_per_target IS NOT NULL THEN
         SELECT count(*) INTO v_source_count
           FROM pm.object_relations r
-          JOIN pm.objects o ON o.id = r.source_id
+          JOIN pm.object_registry o ON o.id = r.source_id
          WHERE r.target_id = NEW.target_id
            AND r.relation_type = NEW.relation_type
            AND o.object_type = v_source_type
@@ -290,14 +302,18 @@ CREATE TRIGGER object_relations_enforce_rules
     EXECUTE FUNCTION pm.enforce_object_relation_rules();
 
 -- source_id, target_id und relation_type bilden gemeinsam die Identität der
--- Beziehung. Die Rolle build darf diese nicht per UPDATE verändern (der
--- Trigger erzwingt das ohnehin); eine andere Beziehung wird durch DELETE und
--- INSERT abgebildet. Nur description ist nachträglich änderbar.
+-- Beziehung. editor darf diese Felder nicht per UPDATE verändern; der
+-- Trigger erzwingt das zusätzlich. Eine andere Beziehung wird durch DELETE
+-- und INSERT abgebildet. Nur description ist nachträglich änderbar. reader
+-- besitzt ausschließlich Leserechte.
 GRANT SELECT, INSERT, DELETE
     ON pm.object_relations
-    TO build;
+    TO editor;
 GRANT UPDATE (description)
     ON pm.object_relations
-    TO build;
+    TO editor;
+GRANT SELECT
+    ON pm.object_relations
+    TO reader;
 
 RESET ROLE;

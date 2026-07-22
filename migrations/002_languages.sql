@@ -1,10 +1,12 @@
 -- Läuft als migrator und wechselt für diese Migration zu schema_owner.
 --
 -- Sprachkonfiguration und zentrale Prüffunktion für alle Sprachkarten-Spalten
--- im System (pm.objects.title, pm.areas.title/description,
--- pm.relation_types.title/description, später fachliche Felder wie
--- pm.sprints.goal). Muss vor 003_objects.sql stehen, da dessen title-Trigger
--- bereits pm.validate_language_map() verwendet.
+-- im System (pm.areas.title/description, pm.relation_types.title/description,
+-- später fachliche Felder wie pm.sprints.goal).
+--
+-- Diese Migration muss vor allen Migrationen ausgeführt werden, die
+-- pm.validate_language_map() verwenden. Sie muss insbesondere vor
+-- 004_areas.sql und 006_relation_types.sql laufen.
 --
 -- Zwei Ebenen pro Sprache: konfiguriert (Zeile in pm.languages vorhanden)
 -- und verpflichtend (is_required). Bewusst KEINE Standardsprache: Pages PM
@@ -17,10 +19,16 @@
 -- Sprache zunächst optional einzuführen, bestehende Inhalte nachzuziehen und
 -- sie erst danach zur Pflicht zu machen.
 --
--- pm.languages wird zunächst nur durch kontrollierte Schema-Migrationen
--- verändert, nicht durch die gewöhnliche Anwendung — Änderungen an der
--- Sprachliste können bestehende Sprachkarten ungültig machen (siehe unten),
--- eine Verwaltungsfunktion dafür ist noch nicht Teil dieses Standes.
+-- Diese Kernmigration legt bewusst noch keine Sprachen fest. Deutsch und
+-- Englisch sind Eigenschaften der konkreten Pages-PM-Installation, nicht
+-- des Kernschemas. Sie werden nach dieser Migration durch
+-- project/001_languages.sql ergänzt. Ein anderes Projekt kann stattdessen
+-- eine eigene Projektkonfiguration mit anderen Sprachen verwenden.
+--
+-- pm.languages wird nur durch kontrollierte Schema-Migrationen oder
+-- Projektkonfiguration verändert, nicht durch die gewöhnliche Anwendung.
+-- Änderungen an der Sprachliste können bestehende Sprachkarten ungültig
+-- machen. Eine eigene Verwaltungsfunktion ist noch nicht Teil dieses Standes.
 
 SET ROLE schema_owner;
 
@@ -52,9 +60,7 @@ COMMENT ON COLUMN pm.languages.is_required IS
     '(geprüft durch pm.validate_language_map()). Pflichtsprachen sind '
     'gleichrangig; Pages PM definiert bewusst keine Standardsprache.';
 
-INSERT INTO pm.languages (code, autonym, is_required) VALUES
-    ('de', 'Deutsch', true),
-    ('en', 'English', true);
+-- Keine Sprachen in dieser Kernmigration — siehe project/001_languages.sql.
 
 -- Gemeinsame Prüfung für alle Sprachkarten-Spalten im System. p_allow_null
 -- erlaubt optionale Felder wie pm.areas.description.
@@ -122,8 +128,10 @@ COMMENT ON FUNCTION pm.validate_language_map IS
     'Prüft Form (nicht leeres Objekt, nur Zeichenketten, keine reinen Leerraumwerte), '
     'Pflichtsprachen-Vollständigkeit und Abwesenheit unbekannter Sprachcodes.';
 
--- Die Sprachkonfiguration ist kein gewöhnliches Fachdatum:
--- build darf sie lesen, aber nicht verändern.
-GRANT SELECT ON pm.languages TO build;
+-- Die Sprachkonfiguration ist kein gewöhnliches Fachdatum.
+-- migrator darf sie unmittelbar verwalten; editor und reader dürfen
+-- sie nur lesen.
+GRANT SELECT, INSERT, UPDATE, DELETE ON pm.languages TO migrator;
+GRANT SELECT ON pm.languages TO editor, reader;
 
 RESET ROLE;

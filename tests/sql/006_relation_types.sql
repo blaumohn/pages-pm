@@ -91,9 +91,9 @@ SELECT lives_ok(
 SELECT throws_ok(
     $$ INSERT INTO pm.relation_type_endpoints (relation_type, source_type, target_type)
        VALUES ('derived_from', 'unbekannter_typ', 'issue') $$,
-    '22P02',
+    '23503',
     NULL,
-    'unbekannter Objektartwert wird vom Enum abgelehnt'
+    'unbekannte Objektart wird durch den Fremdschlüssel auf pm.object_types abgelehnt'
 );
 
 SELECT throws_ok(
