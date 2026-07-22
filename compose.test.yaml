@@ -1,0 +1,24 @@
+services:
+  postgres_test:
+    build:
+      context: .
+      dockerfile: docker/postgres-test.Dockerfile
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: pages_pm_test
+    ports:
+      - "127.0.0.1:5433:5432"
+    # Flüchtiges Datenverzeichnis: Nach Entfernen und Neuerstellen des
+    # Containers startet PostgreSQL mit einer leeren Testdatenbank.
+    tmpfs:
+      - /var/lib/postgresql
+    volumes:
+      - ./migrations:/migrations:ro
+      - ./tests/sql:/tests:ro
+    stop_grace_period: 10s
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pages_pm_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
