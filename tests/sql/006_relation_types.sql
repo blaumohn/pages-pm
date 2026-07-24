@@ -6,18 +6,29 @@ SELECT has_table('pm', 'relation_type_endpoints', 'pm.relation_type_endpoints ex
 
 SELECT results_eq(
     $$ SELECT key FROM pm.relation_types ORDER BY key $$,
-    ARRAY['derived_from', 'implements', 'references', 'supersedes'],
-    'die vier Anfangs-Beziehungsarten sind vorhanden'
+    ARRAY['derived_from', 'implements', 'references'],
+    'die drei Anfangs-Beziehungsarten sind vorhanden'
 );
 
 SELECT lives_ok(
-    $$ INSERT INTO pm.relation_types (key, title, description)
+    $$ INSERT INTO pm.relation_types (
+           key,
+           title,
+           description,
+           description_required,
+           acyclic
+       )
        VALUES (
            'blocks',
            '{"de": "blockiert", "en": "blocks"}'::jsonb,
-           '{"de": "Das Quellobjekt blockiert das Zielobjekt.", "en": "The source object blocks the target object."}'::jsonb
+           '{
+               "de": "Das Quellobjekt blockiert das Zielobjekt.",
+               "en": "The source object blocks the target object."
+           }'::jsonb,
+           true,
+           true
        ) $$,
-    'neue Beziehungsart mit vollständiger Sprachkarte wird angelegt'
+    'Beziehungsart mit Beschreibungspflicht und Zyklusverbot wird angelegt'
 );
 
 SELECT throws_ok(
@@ -157,7 +168,7 @@ SELECT throws_ok(
 SELECT results_eq(
     $$ SELECT description_required, acyclic
        FROM pm.relation_types
-       WHERE key = 'supersedes' $$,
+       WHERE key = 'blocks' $$,
     $$ VALUES (true, true) $$,
     'description_required und acyclic werden korrekt gespeichert'
 );

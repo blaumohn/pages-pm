@@ -9,9 +9,10 @@
 -- Diese Kernmigration legt nur Struktur und Prüfungen fest, jedoch keine
 -- konkreten Beziehungsarten. Diese gehören zur konkreten Pages-PM-
 -- Installation, nicht zum Kernschema, und werden nach dieser Migration durch
--- project/002_relation_types.sql ergänzt. Dort steht auch die Begründung für
--- die vier anfänglichen Beziehungsarten derived_from, implements, supersedes
--- und references sowie für den Ausschluss von assigned_to und documents.
+-- project/002_relation_types.sql ergänzt. Dort werden die drei anfänglichen
+-- Beziehungsarten derived_from, implements und references sowie der
+-- Verzicht auf allgemeine Beziehungsarten assigned_to, documents und
+-- supersedes begründet.
 --
 -- source_type und target_type in pm.relation_type_endpoints verweisen auf
 -- pm.object_types.key statt auf ein PostgreSQL-Enum. Das entspricht

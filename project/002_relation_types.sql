@@ -4,10 +4,17 @@
 -- pm.relation_types vergeben.
 --
 -- Anfänglicher Satz bewusst klein gehalten: derived_from, implements,
--- supersedes, references. "assigned_to" und "documents" sind ausdrücklich
--- NICHT hier vertreten — assigned_to gehört als klarer Fremdschlüssel in die
--- jeweilige Fachtabelle (z. B. pm.issues.sprint_id), "documents" ist zu
--- mehrdeutig und wird erst bei einem echten Anwendungsfall präzisiert.
+-- references. "assigned_to" und "documents" sind ausdrücklich NICHT hier
+-- vertreten — assigned_to gehört als klarer Fremdschlüssel in die jeweilige
+-- Fachtabelle (z. B. pm.issues.sprint_id), "documents" ist zu mehrdeutig und
+-- wird erst bei einem echten Anwendungsfall präzisiert.
+--
+-- Keine allgemeine Beziehungsart "supersedes": Eindeutige Ersetzungen
+-- (z. B. bei ADRs) werden durch einen unmittelbaren Fremdschlüssel wie
+-- superseded_by_id in der jeweiligen Fachtabelle abgebildet, nicht durch eine
+-- typübergreifende Beziehungsart. Das Beziehungsfundament unterstützt
+-- zyklusfreie, beschreibungspflichtige Beziehungsarten unabhängig davon
+-- weiterhin.
 --
 -- Richtung von derived_from: Quellobjekt → Zielobjekt bedeutet "Quellobjekt
 -- wurde fachlich aus Zielobjekt abgeleitet" (Beispiel: KEP-lite
@@ -43,15 +50,6 @@ INSERT INTO pm.relation_types (
             "en": "The source object implements requirements or decisions of the target object."
         }'::jsonb,
         false, false
-    ),
-    (
-        'supersedes',
-        '{"de": "ersetzt", "en": "supersedes"}'::jsonb,
-        '{
-            "de": "Das Quellobjekt ersetzt das Zielobjekt fachlich.",
-            "en": "The source object supersedes the target object."
-        }'::jsonb,
-        true, true
     ),
     (
         'references',
