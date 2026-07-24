@@ -10,13 +10,19 @@
 -- in der jeweiligen Fachtabelle.
 --
 -- Objektarten stehen in einer Tabelle (pm.object_types) statt in einem
--- PostgreSQL-Enum, damit neue Fachtabellen ihre Objektart per additiver
--- Migration ergänzen können, ohne den Enum-Typ zu ändern. table_name bleibt
--- so lange NULL, bis die zuständige Fachtabellen-Migration sie setzt — erst
--- dann kann sich eine Zeile dieser Tabelle unter dieser Objektart
--- registrieren (siehe pm.register_object() unten). In diesem Stand (Phase A)
--- existieren noch keine Fachtabellen; project/002_object_types.sql seedet
--- lediglich die vorgesehenen Objektart-Schlüssel mit table_name = NULL.
+-- PostgreSQL-Enum, damit neue Fachtabellen ihre Objektart durch additive
+-- Migrationen ergänzen können, ohne einen Enum-Typ ändern zu müssen.
+--
+-- Jede Fachtabellenmigration ab 009 legt ihre Tabelle an und trägt
+-- anschließend in derselben Migration die Objektart mit der zugehörigen
+-- Tabellenreferenz ein. Objektart-Schlüssel und Tabellenzuordnung entstehen
+-- damit atomar.
+--
+-- Es gibt keine eigene Projektdatei mehr, die Objektarten vorab registriert,
+-- und keine registrierte Objektart ohne bestehende Fachtabelle.
+--
+-- In Phase A existieren noch keine Fachtabellen und daher auch keine Zeilen
+-- in pm.object_types.
 --
 -- Jede Fachtabelle registriert neue Zeilen automatisch über einen
 -- AFTER-INSERT-Trigger, der pm.register_object(<objektart>) ausführt, und
@@ -37,7 +43,7 @@ SET ROLE schema_owner;
 
 CREATE TABLE pm.object_types (
     key        text PRIMARY KEY,
-    table_name regclass UNIQUE,
+    table_name regclass NOT NULL UNIQUE,
 
     CONSTRAINT object_types_key_has_valid_format
         CHECK (key ~ '^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$')
@@ -45,14 +51,15 @@ CREATE TABLE pm.object_types (
 
 COMMENT ON TABLE pm.object_types IS
     'Verwaltete Zuordnung zwischen Objektart und zuständiger Fachtabelle. '
-    'table_name ist NULL, bis die zuständige Fachtabellen-Migration sie setzt.';
+    'Enthält ausschließlich betriebsbereite Objektarten — eine Objektart wird '
+    'erst zusammen mit ihrer bereits bestehenden Fachtabelle eingetragen.';
 COMMENT ON COLUMN pm.object_types.key IS
     'Unveränderlicher technischer Schlüssel der Objektart, z. B. "issue" oder "kep_lite".';
 COMMENT ON COLUMN pm.object_types.table_name IS
     'Fachtabelle, deren Zeilen sich unter dieser Objektart registrieren dürfen. '
-    'NULL, solange die Fachtabelle noch nicht existiert. Nach dem erstmaligen '
-    'Setzen darf die Zuordnung nur durch eine ausdrücklich geprüfte '
-    'Schema-Migration geändert werden.';
+    'NOT NULL: es gibt keine registrierte Objektart ohne bestehende Fachtabelle. '
+    'Nach dem erstmaligen Setzen darf die Zuordnung nur durch eine ausdrücklich '
+    'geprüfte Schema-Migration geändert werden.';
 
 CREATE TABLE pm.object_registry (
     id          uuid PRIMARY KEY,
@@ -111,11 +118,6 @@ BEGIN
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Unbekannte Objektart: %', v_object_type
             USING ERRCODE = '23503';
-    END IF;
-
-    IF v_table_name IS NULL THEN
-        RAISE EXCEPTION 'Objektart % besitzt noch keine zugeordnete Fachtabelle', v_object_type
-            USING ERRCODE = '23514';
     END IF;
 
     IF v_table_name <> TG_RELID THEN
@@ -186,7 +188,7 @@ BEGIN
             USING ERRCODE = '23503';
     END IF;
 
-    IF v_table_name IS NULL OR v_table_name <> TG_RELID THEN
+    IF v_table_name <> TG_RELID THEN
         RAISE EXCEPTION
             'Objektart % gehört nicht zu %',
             v_object_type, TG_RELID::regclass
@@ -234,11 +236,11 @@ COMMENT ON FUNCTION pm.deregister_object() IS
 
 REVOKE ALL ON FUNCTION pm.deregister_object() FROM PUBLIC;
 
--- pm.object_types ist verwaltete Konfiguration: migrator legt Objektarten an
--- und setzt table_name, sobald die zuständige Fachtabelle existiert.
--- editor und reader dürfen pm.object_types und pm.object_registry nur lesen;
--- unmittelbare Schreibrechte auf pm.object_registry werden nicht vergeben.
-GRANT SELECT, INSERT, UPDATE, DELETE ON pm.object_types TO migrator;
-GRANT SELECT ON pm.object_types, pm.object_registry TO editor, reader;
+-- pm.object_types gehört zur Schemaebene: Jede Fachtabellenmigration trägt
+-- ihre Objektart als schema_owner zusammen mit der bereits bestehenden
+-- Fachtabelle ein. migrator, editor und reader dürfen pm.object_types und
+-- pm.object_registry nur lesen; unmittelbare Schreibrechte auf beide Tabellen
+-- werden nicht vergeben.
+GRANT SELECT ON pm.object_types, pm.object_registry TO migrator, editor, reader;
 
 RESET ROLE;

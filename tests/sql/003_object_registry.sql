@@ -1,13 +1,12 @@
 BEGIN;
-SELECT plan(15);
+SELECT plan(16);
 
 SELECT has_table('pm', 'object_types', 'pm.object_types existiert');
 SELECT has_table('pm', 'object_registry', 'pm.object_registry existiert');
 
--- Isolierte Prüfumgebung: eigenes Fixture-Schema mit zwei künstlichen
--- Objektarten/Fachtabellen, unabhängig von project/002_object_types.sql und
--- von jeder anderen Testdatei. Wird durch das abschließende ROLLBACK wieder
--- entfernt.
+-- Isolierte Prüfumgebung: eigenes Prüfschema mit zwei künstlichen
+-- Objektarten und Fachtabellen, unabhängig von jeder anderen Testdatei.
+-- Das abschließende ROLLBACK entfernt alle Testobjekte wieder.
 DROP SCHEMA IF EXISTS pm_test CASCADE;
 CREATE SCHEMA pm_test;
 
@@ -19,7 +18,7 @@ CREATE TABLE pm_test.gadgets (
     id uuid PRIMARY KEY
 );
 
--- table_name kann erst gesetzt werden, nachdem die Fixture-Tabelle besteht.
+-- table_name kann erst gesetzt werden, nachdem die Prüftabelle besteht.
 INSERT INTO pm.object_types (key, table_name) VALUES
     ('widget', 'pm_test.widgets'::regclass),
     ('gadget', 'pm_test.gadgets'::regclass);
@@ -93,30 +92,23 @@ SELECT is(
     'unbekannte Objektart hinterlässt keine Fachzeile'
 );
 
--- Objektart ohne zugeordnete Fachtabelle (table_name = NULL).
-INSERT INTO pm.object_types (key, table_name) VALUES ('shadow', NULL);
-
-CREATE TABLE pm_test.shadows (
-    id uuid PRIMARY KEY
-);
-
-CREATE TRIGGER shadows_register_object
-    AFTER INSERT ON pm_test.shadows
-    FOR EACH ROW
-    EXECUTE FUNCTION pm.register_object('shadow');
-
+-- table_name ist NOT NULL: eine Objektart kann nicht ohne bereits
+-- bestehende Fachtabelle eingetragen werden.
 SELECT throws_ok(
-    $$ INSERT INTO pm_test.shadows (id) VALUES ('00000000-0000-0000-0000-000000000003') $$,
-    '23514',
+    $$ INSERT INTO pm.object_types (key, table_name) VALUES ('shadow', NULL) $$,
+    '23502',
     NULL,
-    'Objektart ohne zugeordnete Fachtabelle kann nicht registrieren'
+    'Objektart ohne zugeordnete Fachtabelle kann nicht eingetragen werden'
 );
 
-SELECT is(
-    (SELECT count(*) FROM pm_test.shadows
-      WHERE id = '00000000-0000-0000-0000-000000000003'),
-    0::bigint,
-    'Objektart ohne Fachtabelle hinterlässt keine Fachzeile'
+-- table_name ist UNIQUE: zwei Objektarten dürfen sich nicht dieselbe
+-- Fachtabelle teilen.
+SELECT throws_ok(
+    $$ INSERT INTO pm.object_types (key, table_name)
+       VALUES ('impostor_type', 'pm_test.widgets'::regclass) $$,
+    '23505',
+    NULL,
+    'zwei Objektarten können nicht dieselbe Fachtabelle verwenden'
 );
 
 -- Falsche Tabelle registriert sich nicht unter einer fremden Objektart:
@@ -149,6 +141,17 @@ SELECT ok(
     AND NOT has_table_privilege('editor', 'pm.object_registry', 'UPDATE')
     AND NOT has_table_privilege('editor', 'pm.object_registry', 'DELETE'),
     'editor besitzt keine unmittelbaren Schreibrechte auf pm.object_registry'
+);
+
+-- pm.object_types gehört zur Schemaebene: Objektarten entstehen zusammen mit
+-- ihrer Fachtabelle innerhalb einer Schema-Migration als schema_owner.
+-- migrator darf die Zuordnung lesen, aber nicht unmittelbar verändern.
+SELECT ok(
+    has_table_privilege('migrator', 'pm.object_types', 'SELECT')
+    AND NOT has_table_privilege('migrator', 'pm.object_types', 'INSERT')
+    AND NOT has_table_privilege('migrator', 'pm.object_types', 'UPDATE')
+    AND NOT has_table_privilege('migrator', 'pm.object_types', 'DELETE'),
+    'migrator darf pm.object_types lesen, aber nicht unmittelbar schreiben'
 );
 
 -- Bereits anderweitig registrierte UUID: dieselbe id wird zuerst über

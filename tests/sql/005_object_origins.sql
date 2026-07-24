@@ -3,8 +3,8 @@ SELECT plan(16);
 
 SELECT has_table('pm', 'object_origins', 'pm.object_origins existiert');
 
--- Isolierte Prüfumgebung: eigene künstliche Objektart/Fachtabelle, unabhängig
--- von project/002_object_types.sql und von jeder anderen Testdatei.
+-- Isolierte Prüfumgebung: eigene künstliche Objektart und Fachtabelle,
+-- unabhängig von jeder anderen Testdatei.
 DROP SCHEMA IF EXISTS pm_test CASCADE;
 CREATE SCHEMA pm_test;
 

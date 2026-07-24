@@ -9,7 +9,7 @@
 -- Diese Kernmigration legt nur Struktur und Prüfungen fest, jedoch keine
 -- konkreten Beziehungsarten. Diese gehören zur konkreten Pages-PM-
 -- Installation, nicht zum Kernschema, und werden nach dieser Migration durch
--- project/003_relation_types.sql ergänzt. Dort steht auch die Begründung für
+-- project/002_relation_types.sql ergänzt. Dort steht auch die Begründung für
 -- die vier anfänglichen Beziehungsarten derived_from, implements, supersedes
 -- und references sowie für den Ausschluss von assigned_to und documents.
 --
@@ -144,7 +144,7 @@ COMMENT ON COLUMN pm.relation_type_endpoints.max_sources_per_target IS
     'Höchste Zahl von Quellen je Zielobjekt innerhalb GENAU dieser Typkombination; NULL = unbegrenzt.';
 
 -- Keine Beziehungsarten in dieser Kernmigration — siehe
--- project/003_relation_types.sql.
+-- project/002_relation_types.sql.
 
 -- Beide Tabellen enthalten verwaltete Konfiguration wie pm.languages und
 -- pm.areas. migrator legt Beziehungsarten und Endpunktregeln an, ändert

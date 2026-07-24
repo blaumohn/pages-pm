@@ -36,20 +36,26 @@ compose exec -T postgres_test \
         -c "ALTER ROLE migrator PASSWORD 'test';"
 
 # Migrationen und Projektkonfiguration in expliziter Reihenfolge: project/
-# ergänzt jeweils die vorangehende Kernmigration um Pages-PM-spezifische
-# Konfiguration (Sprachen, Objektarten, Beziehungsarten). Die Reihenfolge über
-# beide Verzeichnisse hinweg lässt sich nicht aus den Dateinamen allein
-# ableiten, deshalb hier ausdrücklich aufgeführt statt per Glob ermittelt.
+# ergänzt die jeweils vorangehende Kernmigration um Pages-PM-spezifische
+# Konfiguration für Sprachen und Beziehungsarten.
+#
+# Objektarten werden nicht über eine eigene Projektdatei vorregistriert,
+# sondern ab 009 von der jeweiligen Fachtabellenmigration atomar zusammen
+# mit ihrer Tabelle angelegt.
+#
+# Die Reihenfolge über beide Verzeichnisse hinweg lässt sich nicht allein
+# aus den Dateinamen ableiten. Deshalb ist sie hier ausdrücklich aufgeführt,
+# statt per Glob ermittelt zu werden.
 set -- \
     migrations/002_languages.sql \
     project/001_languages.sql \
     migrations/003_object_registry.sql \
-    project/002_object_types.sql \
     migrations/004_areas.sql \
     migrations/005_object_origins.sql \
     migrations/006_relation_types.sql \
-    project/003_relation_types.sql \
-    migrations/007_object_relations.sql
+    project/002_relation_types.sql \
+    migrations/007_object_relations.sql \
+    migrations/008_common_field_functions.sql
 
 for entry do
     [ -f "$entry" ] || {

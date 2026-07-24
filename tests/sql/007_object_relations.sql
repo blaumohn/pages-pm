@@ -3,11 +3,10 @@ SELECT plan(29);
 
 SELECT has_table('pm', 'object_relations', 'pm.object_relations existiert');
 
--- Isolierte Prüfumgebung: eigene künstliche Objektarten/Fachtabellen,
--- unabhängig von project/002_object_types.sql und von jeder anderen
--- Testdatei. Eigene Endpunktregeln (analog zu den echten Beziehungsarten aus
--- project/003_relation_types.sql), da Phase A bewusst noch keine wirklichen
--- Projektendpunkte enthält.
+-- Isolierte Prüfumgebung: eigene künstliche Objektarten und Fachtabellen,
+-- unabhängig von jeder anderen Testdatei. Eigene Endpunktregeln, analog zu
+-- den Beziehungsarten aus project/002_relation_types.sql, da Phase A bewusst
+-- noch keine wirklichen Projektendpunkte enthält.
 DROP SCHEMA IF EXISTS pm_test CASCADE;
 CREATE SCHEMA pm_test;
 
@@ -56,7 +55,7 @@ INSERT INTO pm_test.gadgets (id) VALUES
     ('00000000-0000-0000-0000-000000000022'); -- P2 (Rolle: policy-artig)
 
 -- Eigene Beziehungsarten für diesen Test, unabhängig von
--- project/003_relation_types.sql.
+-- project/002_relation_types.sql.
 INSERT INTO pm.relation_types (key, title, description, description_required, acyclic) VALUES
     ('t_derived_from', '{"de": "x", "en": "x"}'::jsonb, '{"de": "x", "en": "x"}'::jsonb, false, true),
     ('t_implements',   '{"de": "x", "en": "x"}'::jsonb, '{"de": "x", "en": "x"}'::jsonb, false, false),
