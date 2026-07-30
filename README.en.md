@@ -4,117 +4,202 @@
 
 # Pages PM
 
-A tested PostgreSQL foundation for repository-oriented project management.
+**Pages PM is a small, self-hosted project management system in which
+issues, decisions, and governing documents live in one shared,
+PostgreSQL-validated store — for people, command lines, and AI agents.**
 
-## Status
+```text
+Not Pages PM
 
-The tested relational foundation for languages, object registration, areas,
-external migration provenance, typed relations, project membership, short
-IDs, and states for projects and areas is implemented on top of the final
-registry model. Also implemented is the shared foundation for the state
-history.
+Jira issue:  "Implement renderer"
+Wiki page:   "Fallback decision"
+Repository:  "Completion rules"
 
-The next operational milestone is managing Pages PM's own development:
-issues and the immediately needed document templates will be implemented as
-domain tables and used with real project data.
+Three places, three states, connections only in prose.
 
-A small Python renderer follows, producing deterministic Markdown output for
-GitHub Pages.
+With Pages PM
 
-Sprint remains part of the full expression scope but is not part of the
-first go-live. It will be implemented once a real sprint period needs to be
-planned, tracked, and evaluated.
+Issue #9e2b --implements--> Decision #8c21
+Policy #4d1a governs its completion
+depends_on #4c19 is checked before "in progress"
+```
+
+> **Status:** The shared PostgreSQL foundation is implemented and tested.
+> Issues and document templates are not yet operational. Next up is the
+> first issue table; the path to the first go-live is
+> [further below](#8-path-to-the-first-go-live). The examples below show
+> the intended interplay, not the current state.
+
+## 1. What I was looking for — and what Pages PM makes of it
+
+### Project work lives in separate systems
+
+**Problem:** The issue sits in the tracker, the decision in the wiki, and
+the completion rule in a repository. To understand why an issue may be
+closed, the team has to open several places and reconstruct the connection
+itself.
+
+**Pages PM:** Issues, decisions, and governing documents live in one shared
+store, connected through typed relations — a wrong connection is a bug, not
+an opinion.
+
+```text
+#9e2b --implements--> #8c21
+Policy #4d1a governs the completion of #9e2b
+```
+
+[Why Pages PM connects these stores](product_spec.md#02-warum) ·
+[Typed relations](product_spec.md#p-008--typisierte-beziehungen-muss)
+
+### Small tools are too weak, large ones too heavy
+
+**Problem:** Small trackers often drop sub-issues, completion criteria, and
+dependencies. Larger systems can model that structure, but demand more
+setup and operations in return.
+
+**Pages PM:** It adopts only the structure small projects actually need
+validated: issues, embedded steps, sub-issues, dependencies, and document
+templates added on demand.
+
+```text
+Sub-issue
+→ its own state and its own accountability
+
+Step
+→ part of an issue, no identity of its own
+
+depends_on
+→ one issue waits for another to complete, checked
+```
+
+[Resolution boundary](product_spec.md#p-014--auflösungsgrenze-muss-nicht-prüfbar) ·
+[Issue model](product_spec.md#76-vorgang)
+
+### Sequential numbers claim an order that doesn't exist
+
+**Problem:** IDs like `PAGES-41`, `PAGES-42`, `PAGES-43` look like a
+domain-meaningful sequence. In reality, issues get imported, split, or
+reassigned to different sub-projects.
+
+**Pages PM:** An internal UUID carries the durable identity. A short ID like
+`#a7k2` serves conversation, commits, and outside references. The title may
+change freely and is never used for resolution.
+
+[Identity and addressing](product_spec.md#74-kennungen-adressierung-und-rahmen)
+
+### A full legacy import delays the start
+
+**Problem:** Unifying every old Jira issue, wiki page, and file before
+go-live costs a lot of work, even though much of it may never be needed
+again.
+
+**Pages PM:** An old item is only migrated once today's work actually needs
+it. Its provenance is preserved.
+
+```text
+JIRA-42 is needed today
+→ migrate it now
+→ record provenance jira / JIRA-42
+
+an old ADR becomes relevant later
+→ migrate it only then
+```
+
+[External provenance](product_spec.md#p-006--externe-herkunft-muss-bei-übernahmen) ·
+[Import and development history](product_spec.md#f--import-und-entwicklungsverlauf)
+
+### People, scripts, and agents must not follow different rules
+
+**Problem:** If rules are only checked in one UI or one programming
+language, every other write path has to reimplement the same validation.
+An import script or an agent can otherwise produce different data than the
+UI would.
+
+**Pages PM:** PostgreSQL validates the shared store regardless of the write
+path. A person, a SQL script, an AI agent, and a future web UI all hit the
+same constraints, foreign keys, and transaction rules.
+
+```text
+already enforced:
+missing required assignment (e.g. an issue without a project)
+→ rejected
+
+with the issue table:
+invalid relation (e.g. depends_on pointing at the wrong object type)
+→ rejected
+
+a multi-step operation with one failing step
+→ rolled back entirely
+```
+
+[Shared product rules](product_spec.md#4-gemeinsame-produktregeln) ·
+[Project membership](product_spec.md#p-002--projektzugehörigkeit-muss)
+
+### Historical content should be usable, not just searchable
+
+**Problem:** A Git archive or an old wiki can be searched, but it still
+isn't a connected, validated body of work.
+
+**Pages PM:** Needed content gets migrated into today's model, connected to
+it, and from then on maintained under the same rules as new content.
+
+[Import and development history](product_spec.md#f--import-und-entwicklungsverlauf)
+
+The full walkthrough with real short IDs and timestamps is in the
+[product specification, §0.5](product_spec.md#05-ein-fall-von-anfang-bis-ende)
+(German only). Issue, ADR, and policy are not yet implemented as domain
+tables — the examples above show the intended interplay that every upcoming
+migration is checked against.
+
+## 2. What Pages PM deliberately is not
+
+- Not a full Scrum or Kanban prescription.
+- Not a mirror of conversations, Git, or external systems — only
+  governance- and evidence-relevant statements are stored.
+- Not a stockpile of document templates built on spec; a new domain type
+  needs a demonstrated purpose (P-012).
+- No presentation rules in the domain model. Headings, field order, and
+  permalinks belong to the renderer, not the domain templates (§3.2).
+- Not a cloud SaaS with per-seat pricing and a web UI. The first mode of
+  operation is local PostgreSQL plus the command line.
+
+(In full: §3.2 of the specification.)
+
+## 3. Why not just Jira, Confluence, or Plane?
+
+| | Without Pages PM | With Pages PM |
+|---|---|---|
+| **Agents** | Tracker API: network, token, rate limit per query. | Local SQL; an agent reads the whole store in one query. |
+| **Cost** | Per-seat pricing, even for occasional viewing. | Postgres in a container. |
+| **Documentation** | The tracker runs issues, the wiki runs prose — the two drift apart. | Policy, ADR, and spec are domain objects of their own, validated and connected (§8). |
+
+Nine existing tools were reviewed on July 27, 2026 (Appendix D of the
+specification). **If you only need sprints and issues, use Plane.** Pages PM
+pays off once you need the template system — when governing documents should
+live in the same validated store as the work itself
+([§0.2](product_spec.md#02-warum)).
+
+## 4. Current state in detail
+
+Implemented and tested today:
+
+- languages and object registration;
+- projects, areas, and exactly one project membership per ordinary domain
+  object;
+- short IDs and external provenance;
+- typed relations including `depends_on`;
+- states for projects and areas;
+- the shared foundation for the state history.
+
+Not yet implemented: any domain table (issue and the first needed document
+templates), the `depends_on` endpoint rule issue → issue (it needs the issue
+table), the atomic link between state transitions and the state history, the
+shared `pm.objects` read view, and the Python renderer for GitHub Pages.
+Sprint is deliberately excluded from the first go-live (§12.5) — it will be
+implemented once a real sprint period needs to be planned, tracked, and
+evaluated.
 
 PostgREST, a web UI, and a general write API are not part of the MVP.
-
-## Motivation
-
-Pages PM represents project management data in validated PostgreSQL domain
-tables. Every domain object type has its own domain table with explicit
-columns, constraints, and domain rules. Shared relations, areas, and
-migration provenance use an automatically maintained object registry.
-Historical content is only normalized on demand; PostgreSQL remains the
-authoritative data source.
-
-The authoritative product specification lives in
-[`product_spec.md`](product_spec.md). This README describes the current
-technical state, the repository layout, and the path to implementation.
-
-### Example
-
-Suppose Pages PM manages this issue:
-
-```text
-Issue 42
-Title: Build the GitHub Pages renderer
-Sprint: 3
-Area: publishing
-Prior source: Jira PAGES-42
-```
-
-The full issue data lives in `pm.issues`. Inserting it automatically creates
-a registry row:
-
-```text
-UUID:       018f…42
-Object type: issue
-```
-
-`pm.object_registry` therefore holds neither the title nor the status of the
-issue — only its shared identifier and object type.
-
-The sprint assignment lives directly in `pm.issues.sprint_id`. The
-`publishing` area is assigned via `pm.object_areas` — issue 42 could also
-belong to `build`, but not twice to `publishing`. The prior Jira unit
-`PAGES-42` is recorded as provenance in `pm.object_origins` and may not also
-be assigned to another internal object.
-
-Independent of issue 42, `pm.object_relations` could store this relation:
-
-```text
-ADR 5 --derived_from--> KEP-lite 2
-```
-
-The reverse edge `KEP-lite 2 --derived_from--> ADR 5` would be rejected
-because, together with the first edge, it would form a cycle.
-
-Sprint, issue, ADR, and KEP-lite do not yet exist in the current state (see
-"Current scope"); the example describes the intended interplay.
-
-## Terminology
-
-Three distinct operations share related but different names:
-
-### Schema migration
-
-Changes the reusable database schema and its rules (`migrations/`).
-
-**Example:** A future migration introduces `pm.issues`. Afterwards, an issue
-with title, state, project membership, and completion criteria can be
-created; PostgreSQL enforces the domain rules defined for it.
-
-### Project configuration
-
-Registers the concrete languages, relation types, and initial project
-structure of this Pages PM installation (`project/`). Object types instead
-arise atomically in the schema migration of their respective domain table.
-
-**Example:** `project/001_languages.sql` sets `de` and `en` as required
-languages. A title with only `{"de": "Veröffentlichung"}` is therefore
-rejected; a title with `{"de": "Veröffentlichung", "en": "Publication"}` is
-accepted.
-
-### Content migration / import
-
-Normalizes an external archive unit into an internal object
-(`pm.object_origins`).
-
-**Example:** The prior Jira issue `PAGES-42` and the supplementary archive
-file `notes/renderer.md` are assigned to the same Pages PM issue as two
-separate provenance rows. `PAGES-42` may not then be assigned to a second
-internal object.
-
-## Current scope
 
 | Migration | Purpose |
 |---|---|
@@ -126,22 +211,39 @@ internal object.
 | `006_relation_types.sql` | Relation type definitions + allowed endpoint combinations |
 | `007_object_relations.sql` | Validated typed relations between objects (cardinality, cycles, descriptions) |
 | `008_common_field_functions.sql` | Shared helper functions for upcoming domain tables, e.g. minimum lengths for required texts and automatic `updated_at` timestamps |
-| `009_projects.sql` | Project hierarchy (`pm.projects`) and project membership per domain object (`pm.object_projects`) |
+| `009_projects.sql` | Project hierarchy (`pm.projects`), project membership per domain object (`pm.object_projects`), and its requirement under P-002 (`requires_project_assignment`, deferred constraint triggers) |
 | `010_short_ids.sql` | Short IDs (§7.4): a directory not reassignable under normal operation, automatic assignment on registration, and exact resolution |
 | `011_project_area_state.sql` | State for projects and areas, plus scope mode for projects (§7.4); blocks new assignments to closed projects |
 | `012_state_history.sql` | Shared, append-only-in-effect foundation for the state history per P-010 across all registered domain objects |
 
 `project/` supplements this concrete Pages PM installation with languages,
-relation types, and the initial project structure (see "Terminology" above).
-Object types arise atomically in the schema migration of their respective
-domain table.
+relation types (`derived_from`, `implements`, `references`, `depends_on`),
+and the initial project structure. Object types instead arise atomically in
+the schema migration of their respective domain table.
 
-Not yet implemented: domain tables (issue, and the first needed document
-template), the atomic recording of their state changes in the state
-history, the shared `pm.objects` view, and the Python renderer. A general
-write API, PostgREST, and a UI are planned for a later expansion.
+## 5. Get started in five minutes
 
-## Architecture
+There is no operational service start yet — that arrives with the issue
+table and the SQL entry-point wrapper
+([section 8](#8-path-to-the-first-go-live)). What runs today in five minutes
+is the full migration and test run against a disposable database. Requires
+Docker.
+
+```sh
+./scripts/test-sql.sh
+```
+
+Builds a disposable PostgreSQL 18 + pgTAP container, applies all migrations
+in order, runs the pgTAP test suite, and tears everything down afterwards.
+
+The tests, among other things, create synthetic domain objects, register
+them automatically in the object registry, assign a project, an area, and an
+external provenance to them, and connect them via typed relations.
+Provenance and relations block deletion until explicitly removed. For
+project-required object types, PostgreSQL demands a valid project
+assignment by the time of the deferred check at the latest.
+
+## 6. Technical model
 
 ```
 PostgreSQL
@@ -153,11 +255,11 @@ PostgreSQL
 │   └── automatically maintained shared UUID and type registration
 ├── shared foundations
 │   ├── languages
-│   ├── projects and project membership
+│   ├── projects and project membership (exactly one, enforced)
 │   ├── areas
 │   ├── short IDs
 │   ├── migration provenance
-│   ├── typed relations
+│   ├── typed relations (incl. depends_on)
 │   ├── states for projects and areas
 │   └── foundation for the state history
 └── pm.objects (not yet implemented)
@@ -172,10 +274,12 @@ Publication (not yet implemented)
 └── Python renderer connects as reader and generates Markdown for GitHub Pages
 ```
 
-For example, `editor` may create issue 42 and change its title. The
-resulting entry in `pm.object_registry` is created automatically by the
-domain table's registration trigger. `editor` may not, however, create a
-registry entry or a new object type directly.
+`editor` may create an issue and change its title; the resulting entry in
+`pm.object_registry` is created automatically by the domain table's
+registration trigger. `editor` may not, however, create a registry entry or
+a new object type directly. For project-required object types, the deferred
+constraint triggers in `009_projects.sql` enforce that a valid project
+assignment exists by the time of the check.
 
 The initial implementation uses PostgreSQL as the authoritative store.
 A later repository-backed mode may use canonical text data as the durable
@@ -185,26 +289,10 @@ Migrations are not auto-applied in the current operating model. They are
 versioned SQL files applied by `migrator` after review. The disposable test
 database uses `scripts/test-sql.sh` to apply them automatically.
 
-## Run the tests
-
-Requires Docker.
-
-```sh
-./scripts/test-sql.sh
-```
-
-Builds a disposable PostgreSQL 18 + pgTAP container, applies all migrations
-in order, runs the pgTAP test suite, and tears everything down afterwards.
-
-The tests, among other things, create two synthetic domain objects, register
-them automatically in the object registry, assign one of them to an area and
-an external provenance, and connect both via a typed relation. As long as
-the provenance or relation exists, PostgreSQL rejects deletion.
-
-## Repository structure
+## 7. Repository structure
 
 ```
-product_spec.md   authoritative product specification
+product_spec.md   authoritative product specification (German)
 migrations/       versioned SQL migrations (001_bootstrap.sql, 002_..., ...)
 project/          Pages PM-specific project configuration (languages, relation types, project structure)
 tests/sql/        pgTAP tests grouped by the migration or subsystem they cover
@@ -214,43 +302,49 @@ compose.yaml      local development database
 compose.test.yaml disposable test database
 ```
 
-## Roadmap
+## 8. Path to the first go-live
 
-The selected domain types (sprint, issue, KEP-lite, ADR, system spec,
-process spec, policy, runbook, postmortem, drift report, feature matrix,
-test matrix, and Jira work log) are not an optional later expansion but the
-defined domain expression scope of Pages PM. Each type takes on its own role
-in the workflow; implementing all of them is a firm part of Phase B, even
-though when each one is actually used depends on need.
+The [product specification](product_spec.md) (German) grounds and governs
+the domain model; this README only explains the product and its state.
+Targeted entry points:
 
-### First operational core
+| Question | Section |
+|---|---|
+| Why does Pages PM exist? | [§0.2](product_spec.md#02-warum) |
+| A case from start to finish | [§0.5](product_spec.md#05-ein-fall-von-anfang-bis-ende) |
+| Why typed relations? | [P-008](product_spec.md#p-008--typisierte-beziehungen-muss) |
+| Why not model everything as its own object? | [P-014](product_spec.md#p-014--auflösungsgrenze-muss-nicht-prüfbar) |
+| What an issue looks like | [§7.6](product_spec.md#76-vorgang) |
+| How relations and `depends_on` work | [§8](product_spec.md#8-beziehungen) |
 
-1. Implement issue and a first document template.
-2. Introduce `pm.objects` as the shared read view.
-3. Add a first domain end-to-end test proving registration, areas,
-   provenance, relations, permissions, and deletion rules; selected,
-   verified excerpts later replace the placeholder examples in this
-   README.
-4. Provide the SQL entry-point wrapper (`scripts/write-sql.sh`): connects
-   as `editor`, `ON_ERROR_STOP`, transactional execution of a SQL script.
-5. Manage Pages PM's own further development within the system itself:
+**Foundation** (languages, registry, areas, provenance, relations incl.
+`depends_on`, project membership, short IDs, states for projects and areas,
+foundation for the state history) is implemented. What follows, in this
+order:
+
+1. Implement the issue table (§7.6).
+2. Add the `depends_on` endpoint rule issue → issue.
+3. Atomically link state transitions and the state history.
+4. Add `pm.objects` as the shared read view (P-011) — deliberately built
+   only after the issue table, since it would have little content before
+   that.
+5. Provide the SQL entry-point wrapper (`scripts/write-sql.sh`): connects as
+   `editor`, `ON_ERROR_STOP`, transactional execution of a SQL script — the
+   first real issue should no longer be created by hand in `psql`.
+6. Create the first real Pages PM issue.
+7. Add the first actually needed document template — no stockpiling of
+   every accepted domain type.
+8. Carry out a full end-to-end walkthrough; selected, verified excerpts
+   later replace the placeholder examples in this README.
+9. Manage Pages PM's own further development within the system itself:
    track the next schema and domain work as real issues, and migrate needed
    historical content on demand.
 
-### Full expression scope
-
-6. Implement the remaining defined domain types.
-7. Continuously extend the end-to-end test with the real workflows of new
-   domain types, once the types involved exist (e.g. postmortem → action
-   item → issue, or KEP-lite → derived ADR).
-8. Formally accept Phase B: all domain types are registered, readable via
-   `pm.objects`, and validated in their intended workflow.
-
-### Publication and hardening
-
-9. Implement a minimal Python renderer for GitHub Pages.
-10. Test roles, permissions, and concurrency with pytest and psycopg.
-11. Harden the system based on real usage.
+After that, as defined (not optional) further expansion: the remaining
+accepted domain types (§6.1), continuously extending the end-to-end
+walkthrough with their real workflows, a minimal Python renderer for GitHub
+Pages, and a validated roles, permissions, and concurrency layer with
+pytest and psycopg.
 
 ## License
 
