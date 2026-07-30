@@ -1,13 +1,13 @@
 BEGIN;
-SELECT plan(16);
+SELECT plan(18);
 
 SELECT has_table('pm', 'relation_types', 'pm.relation_types existiert');
 SELECT has_table('pm', 'relation_type_endpoints', 'pm.relation_type_endpoints existiert');
 
 SELECT results_eq(
     $$ SELECT key FROM pm.relation_types ORDER BY key $$,
-    ARRAY['derived_from', 'implements', 'references'],
-    'die drei Anfangs-Beziehungsarten sind vorhanden'
+    ARRAY['depends_on', 'derived_from', 'implements', 'references'],
+    'die vier Anfangs-Beziehungsarten sind vorhanden'
 );
 
 SELECT lives_ok(
@@ -171,6 +171,26 @@ SELECT results_eq(
        WHERE key = 'blocks' $$,
     $$ VALUES (true, true) $$,
     'description_required und acyclic werden korrekt gespeichert'
+);
+
+SELECT is(
+    (
+        SELECT description_required
+        FROM pm.relation_types
+        WHERE key = 'depends_on'
+    ),
+    false,
+    'depends_on verlangt keine Beschreibung'
+);
+
+SELECT is(
+    (
+        SELECT acyclic
+        FROM pm.relation_types
+        WHERE key = 'depends_on'
+    ),
+    true,
+    'depends_on ist zyklenfrei'
 );
 
 SELECT * FROM finish();

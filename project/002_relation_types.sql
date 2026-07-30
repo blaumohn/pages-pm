@@ -4,10 +4,20 @@
 -- pm.relation_types vergeben.
 --
 -- Anfänglicher Satz bewusst klein gehalten: derived_from, implements,
--- references. "assigned_to" und "documents" sind ausdrücklich NICHT hier
--- vertreten — assigned_to gehört als klarer Fremdschlüssel in die jeweilige
--- Fachtabelle (z. B. pm.issues.sprint_id), "documents" ist zu mehrdeutig und
--- wird erst bei einem echten Anwendungsfall präzisiert.
+-- references, depends_on. "assigned_to" und "documents" sind ausdrücklich
+-- NICHT hier vertreten — assigned_to ist keine allgemeine Objektbeziehung,
+-- sondern gehört in das Verantwortungsmodell der jeweiligen Fachart;
+-- "documents" ist zu mehrdeutig und wird erst bei einem echten
+-- Anwendungsfall präzisiert.
+--
+-- depends_on: Reihenfolge zwischen Vorgängen (§8.1), installationsweit
+-- zyklenfrei, auch über Projektgrenzen hinweg, weil die Zyklenprüfung in
+-- 007_object_relations.sql je Beziehungsart über die gesamte
+-- pm.object_relations läuft, ohne nach Projekt einzuschränken. Ihre
+-- Endpunktregel (issue -> issue) wird erst mit der Vorgangsmigration
+-- eingetragen, weil die Objektart issue hier noch nicht existiert; ohne
+-- Endpunktzeile ist depends_on bis dahin für keine Kombination verwendbar
+-- (007_object_relations.sql, pm.enforce_object_relation_rules).
 --
 -- Keine allgemeine Beziehungsart "supersedes": Eindeutige Ersetzungen
 -- (z. B. bei ADRs) werden durch einen unmittelbaren Fremdschlüssel wie
@@ -59,4 +69,13 @@ INSERT INTO pm.relation_types (
             "en": "The source object informatively references the target object without making a stronger claim. Use this relation type only when no more specific relation type applies."
         }'::jsonb,
         true, false
+    ),
+    (
+        'depends_on',
+        '{"de": "wartet auf", "en": "depends on"}'::jsonb,
+        '{
+            "de": "Das Quellobjekt darf grundsätzlich erst nach Abschluss des Zielobjekts nach \"in Arbeit\" wechseln. Die Abhängigkeit setzt selbst keinen Zustand und kann mit einem festgehaltenen Grund übergangen werden.",
+            "en": "The source object may normally transition to \"in progress\" only after the target object is completed. The dependency does not set any state itself and may be overridden with a recorded reason."
+        }'::jsonb,
+        false, true
     );
