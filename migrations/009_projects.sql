@@ -187,17 +187,32 @@ CREATE TRIGGER projects_prevent_identity_change
 CREATE INDEX projects_parent_id_idx
     ON pm.projects(parent_id);
 
--- Ordnet jedes registrierte Fachobjekt höchstens einem unmittelbaren Projekt
--- zu. Der Primärschlüssel auf object_id erzwingt das. ON DELETE CASCADE auf
--- object_id: verschwindet das Fachobjekt (und damit sein Registereintrag),
--- verschwindet auch seine Projektzuordnung automatisch, symmetrisch zu
--- pm.object_areas. ON DELETE RESTRICT auf project_id: ein Projekt mit
--- zugeordneten Objekten kann nicht gelöscht werden.
+-- P-002 gilt nicht für jede Objektart: Ein Sprint (§7.5) trägt eine
+-- Projektmenge statt genau einer unmittelbaren Projektzugehörigkeit.
+-- requires_project_assignment hält diese Entscheidung je Objektart fest.
+-- Jede Fachtabellenmigration muss den Wert beim Eintragen ihrer Objektart
+-- ausdrücklich setzen; es gibt bewusst keinen Vorgabewert.
+ALTER TABLE pm.object_types
+    ADD COLUMN requires_project_assignment boolean NOT NULL;
+
+COMMENT ON COLUMN pm.object_types.requires_project_assignment IS
+    'Wahr, wenn Instanzen dieser Objektart nach P-002 genau eine unmittelbare '
+    'Projektzugehörigkeit in pm.object_projects besitzen müssen; falsch, wenn '
+    'für die Objektart eine ausdrücklich abweichende Projektregel gilt.';
+
+-- Ordnet jedes registrierte Fachobjekt einem unmittelbaren Projekt zu.
+-- ON DELETE CASCADE auf object_id: verschwindet das Fachobjekt (und damit
+-- sein Registereintrag), verschwindet auch seine Projektzuordnung
+-- automatisch, symmetrisch zu pm.object_areas. ON DELETE RESTRICT auf
+-- project_id: ein Projekt mit zugeordneten Objekten kann nicht gelöscht
+-- werden.
 --
--- Für den Bootstrap werden Fachobjekt und Projektzuordnung immer in
--- derselben Transaktion angelegt. Eine verzögerte allgemeine Prüfung, dass
--- jedes betriebliche Objekt genau eine Projektzuordnung besitzt, ist noch
--- nicht Teil dieses Standes.
+-- Der Primärschlüssel auf object_id erzwingt höchstens eine unmittelbare
+-- Projektzugehörigkeit je Fachobjekt.
+--
+-- Die verzögerten Constraint-Trigger unterhalb dieser Tabelle erzwingen
+-- zusätzlich mindestens eine Projektzugehörigkeit. Zusammen ergibt das
+-- nach P-002 genau eine unmittelbare Projektzugehörigkeit.
 CREATE TABLE pm.object_projects (
     object_id uuid PRIMARY KEY
         REFERENCES pm.object_registry(id)
@@ -223,6 +238,80 @@ COMMENT ON COLUMN pm.object_projects.project_id IS
 -- Prüfung von ON DELETE RESTRICT beim Löschen eines Projekts.
 CREATE INDEX object_projects_project_id_idx
     ON pm.object_projects(project_id);
+
+-- Erzwingt "mindestens eine" Projektzugehörigkeit für Objektarten mit
+-- requires_project_assignment = true; zusammen mit dem Primärschlüssel auf
+-- object_id (s. o., "höchstens eine") ergibt das P-002, "genau eine".
+--
+-- Gemeinsame Prüffunktion für zwei Constraint-Trigger (unten): Ein neu
+-- registriertes Objekt braucht bis zum Transaktionsende eine Zuordnung; eine
+-- bestehende Zuordnung darf nicht ersatzlos verschwinden. Beide Fälle prüfen
+-- dieselbe Bedingung für dieselbe object_id, deshalb eine Funktion.
+--
+-- DEFERRABLE INITIALLY DEFERRED: Fachzeile, Registrierung (pm.register_object)
+-- und Projektzuordnung entstehen als mehrere Anweisungen derselben
+-- Transaktion; eine sofortige Prüfung würde bereits nach der Registrierung
+-- und vor der noch ausstehenden Zuordnung scheitern. Ebenso beim Umhängen:
+-- DELETE der alten und INSERT der neuen Zuordnung dürfen in beliebiger
+-- Reihenfolge in derselben Transaktion stehen.
+CREATE FUNCTION pm.enforce_object_project_assignment_required()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_object_id uuid;
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        v_object_id := NEW.id;
+    ELSE
+        v_object_id := OLD.object_id;
+    END IF;
+
+    -- Das Objekt kann innerhalb derselben Transaktion bereits gelöscht worden
+    -- sein. Dann wurde auch seine Projektzuordnung durch ON DELETE CASCADE
+    -- entfernt, und die Pflicht besteht nicht mehr.
+    IF NOT EXISTS (
+        SELECT 1
+          FROM pm.object_registry AS r
+          JOIN pm.object_types AS t ON t.key = r.object_type
+         WHERE r.id = v_object_id
+           AND t.requires_project_assignment
+    ) THEN
+        RETURN NULL;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pm.object_projects WHERE object_id = v_object_id
+    ) THEN
+        RAISE EXCEPTION
+            'Objekt % besitzt keine Projektzugehörigkeit (P-002)', v_object_id
+            USING ERRCODE = '23514';
+    END IF;
+
+    RETURN NULL;
+END;
+$$;
+
+COMMENT ON FUNCTION pm.enforce_object_project_assignment_required() IS
+    'Verzögerte Prüfung von P-002, "genau eine unmittelbare Projektzugehörigkeit": '
+    'ausgelöst nach dem Registrieren eines Objekts (pm.object_registry) und nach '
+    'dem Entfernen oder Umhängen einer bestehenden Zuordnung (pm.object_projects), '
+    'geprüft erst am Transaktionsende. Nur für Objektarten mit '
+    'pm.object_types.requires_project_assignment = true.';
+
+CREATE CONSTRAINT TRIGGER object_registry_requires_project_assignment
+    AFTER INSERT ON pm.object_registry
+    DEFERRABLE INITIALLY DEFERRED
+    FOR EACH ROW
+    EXECUTE FUNCTION pm.enforce_object_project_assignment_required();
+
+-- Bei UPDATE wird OLD.object_id geprüft: Das bisher zugeordnete Objekt darf
+-- durch das Verschieben der Zuordnungszeile nicht ohne Projekt zurückbleiben.
+CREATE CONSTRAINT TRIGGER object_projects_requires_replacement
+    AFTER DELETE OR UPDATE OF object_id ON pm.object_projects
+    DEFERRABLE INITIALLY DEFERRED
+    FOR EACH ROW
+    EXECUTE FUNCTION pm.enforce_object_project_assignment_required();
 
 -- Die anfängliche Projektstruktur selbst wird als Projektkonfiguration unter
 -- Schemahoheit angelegt (project/003_projects.sql, läuft als migrator).

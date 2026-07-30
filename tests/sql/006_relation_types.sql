@@ -86,11 +86,11 @@ CREATE TABLE pm_test.doohickeys (
     id uuid PRIMARY KEY
 );
 
-INSERT INTO pm.object_types (key, table_name) VALUES
-    ('widget',    'pm_test.widgets'::regclass),
-    ('gadget',    'pm_test.gadgets'::regclass),
-    ('gizmo',     'pm_test.gizmos'::regclass),
-    ('doohickey', 'pm_test.doohickeys'::regclass);
+INSERT INTO pm.object_types (key, table_name, requires_project_assignment) VALUES
+    ('widget',    'pm_test.widgets'::regclass,    false),
+    ('gadget',    'pm_test.gadgets'::regclass,    false),
+    ('gizmo',     'pm_test.gizmos'::regclass,     false),
+    ('doohickey', 'pm_test.doohickeys'::regclass, false);
 
 RESET ROLE;
 

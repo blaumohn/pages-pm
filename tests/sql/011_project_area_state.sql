@@ -11,8 +11,8 @@ CREATE TABLE pm_test.widgets (
     id uuid PRIMARY KEY
 );
 
-INSERT INTO pm.object_types (key, table_name) VALUES
-    ('state_widget', 'pm_test.widgets'::regclass);
+INSERT INTO pm.object_types (key, table_name, requires_project_assignment) VALUES
+    ('state_widget', 'pm_test.widgets'::regclass, false);
 
 CREATE TRIGGER widgets_register_object
     AFTER INSERT ON pm_test.widgets
