@@ -60,7 +60,8 @@ set -- \
     migrations/010_short_ids.sql \
     migrations/011_project_area_state.sql \
     project/003_projects.sql \
-    migrations/012_state_history.sql
+    migrations/012_state_history.sql \
+    migrations/013_issues.sql
 
 for entry do
     [ -f "$entry" ] || {
