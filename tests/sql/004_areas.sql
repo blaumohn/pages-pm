@@ -27,32 +27,33 @@ CREATE TRIGGER widgets_deregister_object
     EXECUTE FUNCTION pm.deregister_object('widget');
 
 SELECT lives_ok(
-    $$ INSERT INTO pm.areas (key, title, description)
+    $$ INSERT INTO pm.areas (key, title, description, state)
        VALUES (
            'http_runtime',
            '{"de": "HTTP-Laufzeit", "en": "HTTP runtime"}'::jsonb,
-           '{"de": "Anfragebearbeitung", "en": "Request handling"}'::jsonb
+           '{"de": "Anfragebearbeitung", "en": "Request handling"}'::jsonb,
+           'active'
        ) $$,
     'gültiger Bereich mit Titel und Beschreibung wird angelegt'
 );
 
 SELECT lives_ok(
-    $$ INSERT INTO pm.areas (key, title)
-       VALUES ('build', '{"de": "Build", "en": "Build"}'::jsonb) $$,
+    $$ INSERT INTO pm.areas (key, title, state)
+       VALUES ('build', '{"de": "Build", "en": "Build"}'::jsonb, 'active') $$,
     'Beschreibung ist optional'
 );
 
 SELECT throws_ok(
-    $$ INSERT INTO pm.areas (key, title)
-       VALUES ('HTTP Runtime', '{"de": "x", "en": "y"}'::jsonb) $$,
+    $$ INSERT INTO pm.areas (key, title, state)
+       VALUES ('HTTP Runtime', '{"de": "x", "en": "y"}'::jsonb, 'active') $$,
     '23514',
     NULL,
     'ungültiges Schlüsselformat wird abgelehnt'
 );
 
 SELECT throws_ok(
-    $$ INSERT INTO pm.areas (key, title)
-       VALUES ('deploy', '{"de": "Nur Deutsch"}'::jsonb) $$,
+    $$ INSERT INTO pm.areas (key, title, state)
+       VALUES ('deploy', '{"de": "Nur Deutsch"}'::jsonb, 'active') $$,
     '23514',
     NULL,
     'fehlende Pflichtsprache im Titel wird abgelehnt'

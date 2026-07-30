@@ -1,7 +1,7 @@
 -- Läuft als migrator und wechselt für diese Migration zu schema_owner.
 --
 -- Projektzugehörigkeit ist eine allgemeine Grundlage und wird vor der ersten
--- Fachart (010_kep_lites.sql) umgesetzt. Ein Projekt ist ein eigenständig
+-- Fachart umgesetzt. Ein Projekt ist ein eigenständig
 -- geplantes und entwickeltes Vorhaben mit eigener fachlicher Abgrenzung und
 -- eigenem Lebenszyklus (z. B. "Pages PM"), keine Pages-PM-Fachart und keine
 -- Instanz einer Objektart aus pm.object_types.

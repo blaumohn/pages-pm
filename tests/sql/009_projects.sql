@@ -32,15 +32,15 @@ CREATE TRIGGER widgets_deregister_object
 
 -- 1: Root-Projekt.
 SELECT lives_ok(
-    $$ INSERT INTO pm.projects (key, title)
-       VALUES ('test_root_project', '{"de": "Wurzel", "en": "Root"}'::jsonb) $$,
+    $$ INSERT INTO pm.projects (key, title, state, scope_mode)
+       VALUES ('test_root_project', '{"de": "Wurzel", "en": "Root"}'::jsonb, 'active', 'unweighted') $$,
     'Root-Projekt kann angelegt werden'
 );
 
 -- 2: Unterprojekt über parent_id.
 SELECT lives_ok(
-    $$ INSERT INTO pm.projects (key, title, parent_id)
-       SELECT 'test_child_project', '{"de": "Kind", "en": "Child"}'::jsonb, id
+    $$ INSERT INTO pm.projects (key, title, parent_id, state, scope_mode)
+       SELECT 'test_child_project', '{"de": "Kind", "en": "Child"}'::jsonb, id, 'active', 'unweighted'
        FROM pm.projects WHERE key = 'test_root_project' $$,
     'Unterprojekt kann angelegt werden'
 );
@@ -56,10 +56,11 @@ SELECT is(
     'Unterprojekt ist über parent_id dem Root-Projekt zugeordnet'
 );
 
--- 4: ungültiges Schlüsselformat.
+-- 4: ungültiges Schlüsselformat. state/scope_mode sind gültig gesetzt, damit
+-- ausschließlich das Schlüsselformat die Prüfung auslöst.
 SELECT throws_ok(
-    $$ INSERT INTO pm.projects (key, title)
-       VALUES ('Test Invalid Key', '{"de": "x", "en": "y"}'::jsonb) $$,
+    $$ INSERT INTO pm.projects (key, title, state, scope_mode)
+       VALUES ('Test Invalid Key', '{"de": "x", "en": "y"}'::jsonb, 'active', 'unweighted') $$,
     '23514',
     NULL,
     'ungültiges Schlüsselformat wird abgelehnt'
@@ -69,10 +70,11 @@ SELECT throws_ok(
 -- Sprachkarten-Prüftrigger (23514) vor der Eindeutigkeitsprüfung (23505)
 -- scheitert.
 SELECT throws_ok(
-    $$ INSERT INTO pm.projects (key, title)
+    $$ INSERT INTO pm.projects (key, title, state, scope_mode)
        VALUES (
            'test_child_project',
-           '{"de": "Doppeltes Projekt", "en": "Duplicate project"}'::jsonb
+           '{"de": "Doppeltes Projekt", "en": "Duplicate project"}'::jsonb,
+           'active', 'unweighted'
        ) $$,
     '23505',
     NULL,
@@ -81,8 +83,8 @@ SELECT throws_ok(
 
 -- 6: Titel unterschreitet die Mindestlänge.
 SELECT throws_ok(
-    $$ INSERT INTO pm.projects (key, title)
-       VALUES ('test_too_short_title', '{"de": "x", "en": "y"}'::jsonb) $$,
+    $$ INSERT INTO pm.projects (key, title, state, scope_mode)
+       VALUES ('test_too_short_title', '{"de": "x", "en": "y"}'::jsonb, 'active', 'unweighted') $$,
     '23514',
     NULL,
     'Titel unterhalb der Mindestlänge wird abgelehnt'
@@ -90,11 +92,12 @@ SELECT throws_ok(
 
 -- 7: optionale description unterschreitet die Mindestlänge.
 SELECT throws_ok(
-    $$ INSERT INTO pm.projects (key, title, description)
+    $$ INSERT INTO pm.projects (key, title, description, state, scope_mode)
        VALUES (
            'test_too_short_description',
            '{"de": "gueltig", "en": "valid"}'::jsonb,
-           '{"de": "x", "en": "y"}'::jsonb
+           '{"de": "x", "en": "y"}'::jsonb,
+           'active', 'unweighted'
        ) $$,
     '23514',
     NULL,
@@ -115,12 +118,14 @@ SELECT throws_ok(
 -- (test_leaf_project) getrennt pruefen.
 -- updated_at wird ausdruecklich auf gestern gesetzt, damit Test 13 nicht von
 -- der Zeitaufloesung unmittelbar aufeinanderfolgender Anweisungen abhaengt.
-INSERT INTO pm.projects (key, title, parent_id, updated_at)
+INSERT INTO pm.projects (key, title, parent_id, updated_at, state, scope_mode)
 SELECT
     'test_leaf_project',
     '{"de": "Blatt", "en": "Leaf"}'::jsonb,
     id,
-    statement_timestamp() - interval '1 day'
+    statement_timestamp() - interval '1 day',
+    'active',
+    'unweighted'
 FROM pm.projects WHERE key = 'test_child_project';
 
 -- 9: mehrgliedriger Hierarchiezyklus. test_root_project.parent_id =

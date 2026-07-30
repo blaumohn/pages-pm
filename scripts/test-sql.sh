@@ -57,7 +57,10 @@ set -- \
     migrations/007_object_relations.sql \
     migrations/008_common_field_functions.sql \
     migrations/009_projects.sql \
-    project/003_projects.sql
+    migrations/010_short_ids.sql \
+    migrations/011_project_area_state.sql \
+    project/003_projects.sql \
+    migrations/012_state_history.sql
 
 for entry do
     [ -f "$entry" ] || {
