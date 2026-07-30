@@ -10,16 +10,21 @@ Projektverwaltung.
 ## Status
 
 Das getestete relationale Fundament für Sprachen, Objektregistrierung,
-Bereiche, externe Migrationsherkünfte und typisierte Beziehungen ist auf
-Grundlage des endgültigen Registermodells umgesetzt.
+Bereiche, externe Migrationsherkünfte, typisierte Beziehungen,
+Projektzugehörigkeit, Kurzkennungen sowie Zustände für Projekt und Bereich
+ist auf Grundlage des endgültigen Registermodells umgesetzt. Ebenso
+umgesetzt ist die gemeinsame Grundlage für den Zustandsverlauf.
 
 Der nächste betriebliche Meilenstein ist die Verwaltung der Entwicklung von
-Pages PM selbst: aktuelle Sprints, Vorgänge und die unmittelbar benötigten
-Dokumentvorlagen werden als Fachtabellen umgesetzt und mit realen
-Projektdaten verwendet.
+Pages PM selbst: Vorgänge und die unmittelbar benötigten Dokumentvorlagen
+werden als Fachtabellen umgesetzt und mit realen Projektdaten verwendet.
 
-Darauf folgt ein kleiner Python-Renderer, der eine deterministische
+Danach folgt ein kleiner Python-Renderer, der eine deterministische
 Markdown-Ausgabe für GitHub Pages erzeugt.
+
+Sprint bleibt Teil des vollständigen Ausdrucksumfangs, gehört aber nicht zum
+ersten Go-live. Er wird umgesetzt, sobald ein wirklicher Sprintzeitraum
+geplant, fortgeschrieben und ausgewertet werden soll.
 
 PostgREST, eine Weboberfläche und eine allgemeine Schreib-API sind nicht Teil
 des MVP.
@@ -32,6 +37,11 @@ ausdrücklichen Spalten, Constraints und fachlichen Regeln. Gemeinsame
 Beziehungen, Bereiche und externe Herkünfte verwenden ein automatisch
 gepflegtes Objektregister. Historische Inhalte werden nur bei Bedarf
 normalisiert; PostgreSQL bleibt die maßgebliche Datenquelle.
+
+Die maßgebliche fachliche Produktspezifikation steht in
+[`product_spec.md`](product_spec.md). Dieses README beschreibt den
+gegenwärtigen technischen Stand, den Aufbau des Repositorys und den Weg zur
+Umsetzung.
 
 ### Beispiel
 
@@ -85,20 +95,21 @@ Drei unterschiedliche Vorgänge müssen unterschieden werden:
 Verändert das wiederverwendbare Datenbankschema und seine Regeln
 (`migrations/`).
 
-**Beispiel:** `009_sprints.sql` führt `pm.sprints` ein. Danach kann Sprint 3
-für den 1.–14. August angelegt und aktiviert werden. Ein zweiter gleichzeitig
-aktiver Sprint wird von PostgreSQL abgelehnt.
+**Beispiel:** Eine künftige Migration führt `pm.issues` ein. Danach kann ein
+Vorgang mit Titel, Zustand, Projektzugehörigkeit und Abschlusskriterien
+angelegt werden; PostgreSQL prüft dabei die dafür festgelegten Fachregeln.
 
 ### Projektkonfiguration
 
-Registriert die konkreten Sprachen und Beziehungsarten der
-Pages-PM-Installation (`project/`). Objektarten entstehen dagegen atomar in
-der Schema-Migration ihrer jeweiligen Fachtabelle.
+Registriert die konkreten Sprachen, Beziehungsarten und die anfängliche
+Projektstruktur der Pages-PM-Installation (`project/`). Objektarten
+entstehen dagegen atomar in der Schema-Migration ihrer jeweiligen
+Fachtabelle.
 
 **Beispiel:** `project/001_languages.sql` legt `de` und `en` als
-Pflichtsprachen fest. Ein Titel mit nur `{"de": "Sprint 3"}` wird deshalb
-abgelehnt; ein Titel mit `{"de": "Sprint 3", "en": "Sprint 3"}` wird
-angenommen.
+Pflichtsprachen fest. Ein Titel mit nur `{"de": "Veröffentlichung"}` wird
+deshalb abgelehnt; ein Titel mit `{"de": "Veröffentlichung",
+"en": "Publication"}` wird angenommen.
 
 ### Inhaltsmigration beziehungsweise Import
 
@@ -122,13 +133,19 @@ internen Objekt zugeordnet werden.
 | `006_relation_types.sql` | Definition von Beziehungsarten + zulässige Endpunktkombinationen |
 | `007_object_relations.sql` | Geprüfte typisierte Beziehungen zwischen Objekten (Kardinalität, Zyklen, Beschreibungen) |
 | `008_common_field_functions.sql` | Gemeinsame Hilfsfunktionen für kommende Fachtabellen, z. B. Mindestlängen für Pflichttexte und automatische `updated_at`-Zeitstempel |
+| `009_projects.sql` | Projekthierarchie (`pm.projects`) und Projektzugehörigkeit je Fachobjekt (`pm.object_projects`) |
+| `010_short_ids.sql` | Kurzkennungen (§7.4): im Normalbetrieb nicht wiedervergebbares Verzeichnis, automatische Vergabe bei der Registrierung und exakte Auflösung |
+| `011_project_area_state.sql` | Zustand für Projekt und Bereich sowie Umfangsangabe für Projekte (§7.4); sperrt neue Zuordnungen zu abgeschlossenen Projekten |
+| `012_state_history.sql` | Gemeinsame, nur ergänzbare Grundlage für den Zustandsverlauf nach P-010 über alle registrierten Fachobjekte |
 
-`project/` ergänzt die konkrete Pages-PM-Installation um Sprachen und
-Beziehungsarten (siehe Abschnitt „Begriffe“). Objektarten entstehen atomar
-in der Schema-Migration ihrer jeweiligen Fachtabelle.
+`project/` ergänzt die konkrete Pages-PM-Installation um Sprachen,
+Beziehungsarten und die anfängliche Projektstruktur (siehe Abschnitt
+„Begriffe“). Objektarten entstehen atomar in der Schema-Migration ihrer
+jeweiligen Fachtabelle.
 
-Noch nicht umgesetzt: Fachtabellen (Sprint, Vorgang und zunächst benötigte
-Dokumentvorlagen), die gemeinsame `pm.objects`-Lesesicht sowie der
+Noch nicht umgesetzt: Fachtabellen (Vorgang und zunächst benötigte
+Dokumentvorlagen), die atomare Fortschreibung ihrer Zustandsänderungen im
+Zustandsverlauf, die gemeinsame `pm.objects`-Lesesicht sowie der
 Python-Renderer. Eine allgemeine Schreib-API, PostgREST und eine
 Benutzeroberfläche sind erst für einen späteren Ausbau vorgesehen.
 
@@ -137,17 +154,20 @@ Benutzeroberfläche sind erst für einen späteren Ausbau vorgesehen.
 ```
 PostgreSQL
 ├── Fachtabellen sind die maßgeblichen Objekte (noch nicht umgesetzt)
-│   ├── pm.sprints
 │   ├── pm.issues
 │   ├── pm.kep_lites
 │   └── weitere Vorlagen
 ├── pm.object_registry
 │   └── automatisch gepflegte gemeinsame UUID- und Typregistrierung
-├── gemeinsame Regeln
+├── gemeinsame Grundlagen
 │   ├── Sprachen
+│   ├── Projekte und Projektzugehörigkeit
 │   ├── Bereiche
+│   ├── Kurzkennungen
 │   ├── Migrationsherkünfte
-│   └── typisierte Beziehungen
+│   ├── typisierte Beziehungen
+│   ├── Zustände für Projekte und Bereiche
+│   └── Grundlage für den Zustandsverlauf
 └── pm.objects (noch nicht umgesetzt)
     └── gemeinsame Lesesicht über die Fachtabellen
 
@@ -194,8 +214,9 @@ Solange Herkunft oder Beziehung bestehen, lehnt PostgreSQL die Löschung ab.
 ## Repository-Struktur
 
 ```
+product_spec.md   maßgebliche fachliche Produktspezifikation
 migrations/       versionierte SQL-Migrationen (001_bootstrap.sql, 002_..., ...)
-project/          Pages-PM-spezifische Projektkonfiguration (Sprachen, Beziehungsarten)
+project/          Pages-PM-spezifische Projektkonfiguration (Sprachen, Beziehungsarten, Projektstruktur)
 tests/sql/        pgTAP-Tests, gruppiert nach betroffener Migration/Teilsystem
 docker/           reines Test-Abbild Postgres+pgTAP
 scripts/          test-sql.sh (automatisierter Testlauf)
@@ -215,7 +236,7 @@ Zeitpunkt ihrer wirklichen Verwendung vom Bedarf abhängt.
 
 ### Erster betriebsfähiger Kern
 
-1. Sprint, Vorgang und eine erste Dokumentvorlage umsetzen.
+1. Vorgang und eine erste Dokumentvorlage umsetzen.
 2. `pm.objects` als gemeinsame Lesesicht einführen.
 3. Einen ersten fachlichen End-to-End-Test ergänzen, der Registrierung,
    Bereiche, Herkunft, Beziehungen, Rechte und Löschregeln beweist;
@@ -224,10 +245,9 @@ Zeitpunkt ihrer wirklichen Verwendung vom Bedarf abhängt.
 4. Den SQL-Einstiegswrapper (`scripts/write-sql.sh`) bereitstellen:
    Verbindung als `editor`, `ON_ERROR_STOP` und transaktionale Ausführung
    eines SQL-Skripts.
-5. Die weitere Entwicklung von Pages PM im System selbst verwalten:
-   den aktuellen Sprint und die weiteren Phase-B-Migrationen als wirkliche
-   Vorgänge erfassen sowie benötigte historische Inhalte bedarfsgesteuert
-   übernehmen.
+5. Die weitere Entwicklung von Pages PM im System selbst verwalten: die
+   nächsten Schema- und Fachumsetzungen als wirkliche Vorgänge erfassen sowie
+   benötigte historische Inhalte bedarfsgesteuert übernehmen.
 
 ### Vollständiger Ausdrucksumfang
 

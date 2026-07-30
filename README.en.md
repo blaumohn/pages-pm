@@ -9,15 +9,21 @@ A tested PostgreSQL foundation for repository-oriented project management.
 ## Status
 
 The tested relational foundation for languages, object registration, areas,
-external migration provenance, and typed relations is implemented on top of
-the final registry model.
+external migration provenance, typed relations, project membership, short
+IDs, and states for projects and areas is implemented on top of the final
+registry model. Also implemented is the shared foundation for the state
+history.
 
 The next operational milestone is managing Pages PM's own development:
-current sprints, issues, and the immediately needed document templates will
-be implemented as domain tables and used with real project data.
+issues and the immediately needed document templates will be implemented as
+domain tables and used with real project data.
 
 A small Python renderer follows, producing deterministic Markdown output for
 GitHub Pages.
+
+Sprint remains part of the full expression scope but is not part of the
+first go-live. It will be implemented once a real sprint period needs to be
+planned, tracked, and evaluated.
 
 PostgREST, a web UI, and a general write API are not part of the MVP.
 
@@ -29,6 +35,10 @@ columns, constraints, and domain rules. Shared relations, areas, and
 migration provenance use an automatically maintained object registry.
 Historical content is only normalized on demand; PostgreSQL remains the
 authoritative data source.
+
+The authoritative product specification lives in
+[`product_spec.md`](product_spec.md). This README describes the current
+technical state, the repository layout, and the path to implementation.
 
 ### Example
 
@@ -79,19 +89,20 @@ Three distinct operations share related but different names:
 
 Changes the reusable database schema and its rules (`migrations/`).
 
-**Example:** `009_sprints.sql` introduces `pm.sprints`. Afterwards, sprint 3
-can be created and activated for Aug 1–14. A second, simultaneously active
-sprint is rejected by PostgreSQL.
+**Example:** A future migration introduces `pm.issues`. Afterwards, an issue
+with title, state, project membership, and completion criteria can be
+created; PostgreSQL enforces the domain rules defined for it.
 
 ### Project configuration
 
-Registers the concrete languages and relation types of this Pages PM
-installation (`project/`). Object types instead arise atomically in the
-schema migration of their respective domain table.
+Registers the concrete languages, relation types, and initial project
+structure of this Pages PM installation (`project/`). Object types instead
+arise atomically in the schema migration of their respective domain table.
 
 **Example:** `project/001_languages.sql` sets `de` and `en` as required
-languages. A title with only `{"de": "Sprint 3"}` is therefore rejected; a
-title with `{"de": "Sprint 3", "en": "Sprint 3"}` is accepted.
+languages. A title with only `{"de": "Veröffentlichung"}` is therefore
+rejected; a title with `{"de": "Veröffentlichung", "en": "Publication"}` is
+accepted.
 
 ### Content migration / import
 
@@ -115,32 +126,40 @@ internal object.
 | `006_relation_types.sql` | Relation type definitions + allowed endpoint combinations |
 | `007_object_relations.sql` | Validated typed relations between objects (cardinality, cycles, descriptions) |
 | `008_common_field_functions.sql` | Shared helper functions for upcoming domain tables, e.g. minimum lengths for required texts and automatic `updated_at` timestamps |
+| `009_projects.sql` | Project hierarchy (`pm.projects`) and project membership per domain object (`pm.object_projects`) |
+| `010_short_ids.sql` | Short IDs (§7.4): a directory not reassignable under normal operation, automatic assignment on registration, and exact resolution |
+| `011_project_area_state.sql` | State for projects and areas, plus scope mode for projects (§7.4); blocks new assignments to closed projects |
+| `012_state_history.sql` | Shared, append-only-in-effect foundation for the state history per P-010 across all registered domain objects |
 
-`project/` supplements this concrete Pages PM installation with languages
-and relation types (see "Terminology" above). Object types arise atomically
-in the schema migration of their respective domain table.
+`project/` supplements this concrete Pages PM installation with languages,
+relation types, and the initial project structure (see "Terminology" above).
+Object types arise atomically in the schema migration of their respective
+domain table.
 
-Not yet implemented: domain tables (sprint, issue, and the first needed
-document template) together with the shared `pm.objects` view, and the
-Python renderer. A general write API, PostgREST, and a UI are planned for a
-later expansion.
+Not yet implemented: domain tables (issue, and the first needed document
+template), the atomic recording of their state changes in the state
+history, the shared `pm.objects` view, and the Python renderer. A general
+write API, PostgREST, and a UI are planned for a later expansion.
 
 ## Architecture
 
 ```
 PostgreSQL
 ├── domain tables are the authoritative objects (not yet implemented)
-│   ├── pm.sprints
 │   ├── pm.issues
 │   ├── pm.kep_lites
 │   └── further templates
 ├── pm.object_registry
 │   └── automatically maintained shared UUID and type registration
-├── shared rules
+├── shared foundations
 │   ├── languages
+│   ├── projects and project membership
 │   ├── areas
+│   ├── short IDs
 │   ├── migration provenance
-│   └── typed relations
+│   ├── typed relations
+│   ├── states for projects and areas
+│   └── foundation for the state history
 └── pm.objects (not yet implemented)
     └── shared read view across the domain tables
 
@@ -185,8 +204,9 @@ the provenance or relation exists, PostgreSQL rejects deletion.
 ## Repository structure
 
 ```
+product_spec.md   authoritative product specification
 migrations/       versioned SQL migrations (001_bootstrap.sql, 002_..., ...)
-project/          Pages PM-specific project configuration (languages, relation types)
+project/          Pages PM-specific project configuration (languages, relation types, project structure)
 tests/sql/        pgTAP tests grouped by the migration or subsystem they cover
 docker/           test-only Postgres+pgTAP image
 scripts/          test-sql.sh (automated test run)
@@ -205,7 +225,7 @@ though when each one is actually used depends on need.
 
 ### First operational core
 
-1. Implement sprint, issue, and a first document template.
+1. Implement issue and a first document template.
 2. Introduce `pm.objects` as the shared read view.
 3. Add a first domain end-to-end test proving registration, areas,
    provenance, relations, permissions, and deletion rules; selected,
@@ -214,8 +234,8 @@ though when each one is actually used depends on need.
 4. Provide the SQL entry-point wrapper (`scripts/write-sql.sh`): connects
    as `editor`, `ON_ERROR_STOP`, transactional execution of a SQL script.
 5. Manage Pages PM's own further development within the system itself:
-   track the current sprint and further Phase B migrations as real issues,
-   and migrate needed historical content on demand.
+   track the next schema and domain work as real issues, and migrate needed
+   historical content on demand.
 
 ### Full expression scope
 
