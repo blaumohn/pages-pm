@@ -16,8 +16,9 @@
 --   * Sprintauswahl, Sprintrolle, Regel 11 (Vorhaben-Schranke) — Sprint ist
 --     ausdrücklich nicht Teil des ersten Go-live (Phase-B-Entscheidung zu
 --     §12.5).
---   * Regel 5 ("ein Epos wird nicht selbst bearbeitet") und Regel 12
---     (Abhängigkeitsschranke, übergehbar) — beides Regeln über einen
+--   * Regel 1 (Abschluss: erfüllte Kriterien, kein offener Kindvorgang),
+--     Regel 5 ("ein Epos wird nicht selbst bearbeitet") und Regel 12
+--     (Abhängigkeitsschranke, übergehbar) — allesamt Regeln über einen
 --     Zustandsübergang im Kontext, keine reinen Spaltenregeln. Sie gehören
 --     geschlossen in die spätere atomare Übergangsfunktion
 --     pm.transition_issue(). Damit dazwischen kein rohes UPDATE diese Regeln
@@ -29,10 +30,13 @@
 --   * Übergehungen (Nebenfolge aus Regel 12): fällt mit der Übergangs-
 --     funktion zusammen, nutzt pm.state_history (event_kind = 'override',
 --     bereits in 012 vorgesehen), keine eigene Tabelle hier.
---   * Zustandsregeln über Eltern- und Kindvorgänge sind noch nicht
---     spezifiziert und gehören gegebenenfalls in pm.transition_issue().
---     Eine automatische Zustandsausbreitung ist nicht vorausgesetzt;
---     insbesondere wird ein Epos nach Regel 5 nicht selbst bearbeitet.
+--   * Die Abschlusssperre bei offenen Kindvorgängen ist spezifiziert (Regel 1),
+--     aber ebenfalls eine Regel über einen Zustandsübergang: sie prüft
+--     pm.transition_issue() beim Wechsel nach `done`. Eine automatische
+--     Zustandsausbreitung von Kindern auf den Elternvorgang ist damit NICHT
+--     vorausgesetzt. Ein Epos folgt dabei der gewöhnlichen Übergangstabelle;
+--     "nicht selbst bearbeitet" (Regel 5) sperrt weder `in_progress` noch
+--     `in_review`, verlangt für den Abschluss aber mindestens einen Kindvorgang.
 --
 -- Zwei Klassen von Prüfregeln, technisch unterschiedlich behandelt:
 --   * Regeln über Spalten EINER Zeile (Sprachkarten, Kriterienschema,

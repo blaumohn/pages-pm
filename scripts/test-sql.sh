@@ -61,7 +61,8 @@ set -- \
     migrations/011_project_area_state.sql \
     project/003_projects.sql \
     migrations/012_state_history.sql \
-    migrations/013_issues.sql
+    migrations/013_issues.sql \
+    migrations/014_issue_transitions.sql
 
 for entry do
     [ -f "$entry" ] || {
