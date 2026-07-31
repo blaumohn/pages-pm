@@ -25,9 +25,11 @@ Richtlinie #4d1a gilt für seinen Abschluss
 depends_on #4c19 wird vor „in Arbeit“ geprüft
 ```
 
-> **Stand:** Die gemeinsame PostgreSQL-Grundlage ist umgesetzt und getestet.
-> Vorgänge und Dokumentvorlagen sind noch nicht betriebsbereit. Als Nächstes
-> folgt die erste Vorgangstabelle; der Weg zum ersten Go-live steht
+> **Stand:** Die gemeinsame PostgreSQL-Grundlage und die Vorgangstabelle mit
+> ihren Integritätsregeln sind umgesetzt und getestet. Betriebsbereit ist der
+> Vorgang damit noch nicht: Der kontrollierte Zustandswechsel und die
+> gemeinsame Lesesicht fehlen. Als Nächstes folgt die Übergangsfunktion; der
+> Weg zum ersten Go-live steht
 > [weiter unten](#8-weg-zum-ersten-go-live). Die folgenden Beispiele zeigen
 > das vorgesehene Zusammenspiel, nicht den Ist-Zustand.
 
@@ -126,12 +128,15 @@ bereits umgesetzt:
 fehlende Pflichtzuordnung (z. B. Vorgang ohne Projekt)
 → abgewiesen
 
-mit der Vorgangstabelle:
 unzulässige Beziehung (z. B. depends_on auf falsche Objektart)
 → abgewiesen
 
 mehrteiliger Auftrag mit einem Fehler
 → vollständig zurückgerollt
+
+nach Umsetzung der Übergangsfunktion:
+Wechsel nach „in Arbeit“ bei offener Abhängigkeit
+→ abgewiesen
 ```
 
 [Gemeinsame Produktregeln](product_spec.md#4-gemeinsame-produktregeln) ·
@@ -150,9 +155,10 @@ Inhalte fortgeschrieben.
 
 Der vollständige Ablauf mit echten Kurzkennungen und Zeitpunkten steht in der
 [Produktspezifikation, §0.5](product_spec.md#05-ein-fall-von-anfang-bis-ende).
-Vorgang, ADR und Richtlinie sind als Fachtabellen im gegenwärtigen Stand noch
-nicht umgesetzt — die Beispiele oben zeigen das vorgesehene Zusammenspiel,
-gegen das jede kommende Migration geprüft wird.
+ADR und Richtlinie sind als Fachtabellen noch nicht umgesetzt; der Vorgang ist
+vorhanden, trägt aber noch keinen kontrollierten Zustandswechsel. Die Beispiele
+oben zeigen das vorgesehene Zusammenspiel, gegen das jede kommende Migration
+geprüft wird.
 
 ## 2. Was Pages PM bewusst nicht ist
 
@@ -189,17 +195,24 @@ Umgesetzt und getestet sind derzeit:
 - Projekte, Bereiche und genau eine Projektzugehörigkeit je gewöhnlichem
   Fachobjekt;
 - Kurzkennungen und externe Herkünfte;
-- typisierte Beziehungen einschließlich `depends_on`;
+- typisierte Beziehungen einschließlich `depends_on`, mit dem Endpunkt
+  Vorgang → Vorgang;
 - Zustände für Projekte und Bereiche;
-- die gemeinsame Grundlage für den Zustandsverlauf.
+- die gemeinsame Grundlage für den Zustandsverlauf;
+- die Vorgangstabelle mit ihren Regeln über die einzelne Zeile, der
+  zyklenfreien Hierarchie und der Zugehörigkeit von Eltern- und Kindvorgang
+  zu demselben Projekt.
 
-Noch nicht umgesetzt: jede Fachtabelle (Vorgang und die zunächst benötigten
-Dokumentvorlagen), die `depends_on`-Endpunktregel Vorgang → Vorgang (sie
-braucht die Vorgangstabelle), die atomare Verbindung von Zustandswechsel und
-Zustandsverlauf, die gemeinsame `pm.objects`-Lesesicht sowie der
-Python-Renderer für GitHub Pages. Sprint gehört bewusst nicht zum ersten
-Go-live (§12.5) — es wird erst umgesetzt, sobald ein wirklicher
-Sprintzeitraum geplant, fortgeschrieben und ausgewertet werden soll.
+Noch nicht umgesetzt: der kontrollierte Zustandswechsel des Vorgangs
+(zulässige Übergänge, Abhängigkeitsschranke mit begründeter Übergehung,
+Epos-Sperre sowie Abschlusssperre bei offenen Kindvorgängen oder unerfüllten
+Abschlusskriterien) und seine atomare Verbindung mit dem Zustandsverlauf,
+die gemeinsame `pm.objects`-Lesesicht, die Fachtabellen für die weiteren
+geplanten Facharten sowie der Python-Renderer für GitHub Pages. Eine
+verantwortliche Identität führt der Vorgang für den ersten Go-live bewusst
+noch nicht (§10.2 der Spezifikation). Sprint gehört bewusst nicht zum ersten
+Go-live (§12.5) — es wird erst umgesetzt, sobald ein konkreter Projektablauf
+es benötigt.
 
 PostgREST, eine Weboberfläche und eine allgemeine Schreib-API sind nicht Teil
 des MVP.
@@ -218,6 +231,7 @@ des MVP.
 | `010_short_ids.sql` | Kurzkennungen (§7.4): im Normalbetrieb nicht wiedervergebbares Verzeichnis, automatische Vergabe bei der Registrierung und exakte Auflösung |
 | `011_project_area_state.sql` | Zustand für Projekt und Bereich sowie Umfangsangabe für Projekte (§7.4); sperrt neue Zuordnungen zu abgeschlossenen Projekten |
 | `012_state_history.sql` | Gemeinsame, nur ergänzbare Grundlage für den Zustandsverlauf nach P-010 über alle registrierten Fachobjekte |
+| `013_issues.sql` | Vorgang (§7.6) als erste technisch umgesetzte Fachart im maßgeblichen Arbeitsbaum: `pm.issues`, Pflichtschwellen ab *bereit*, Schema der Abschlusskriterien, zyklenfreie Hierarchie mit zulässigen Eltern-/Kindarten, Zugehörigkeit von Eltern- und Kindvorgang zu demselben Projekt sowie `depends_on`-Endpunkt Vorgang → Vorgang. `editor` darf den Zustand nicht unmittelbar ändern. |
 
 `project/` ergänzt die konkrete Pages-PM-Installation um Sprachen,
 Beziehungsarten (`derived_from`, `implements`, `references`, `depends_on`)
@@ -226,8 +240,11 @@ der Schema-Migration ihrer jeweiligen Fachtabelle.
 
 ## 5. In fünf Minuten starten
 
-Es gibt noch keinen produktiven Servicestart — das kommt erst mit Vorgang und
-dem SQL-Einstiegswrapper ([Abschnitt 8](#8-weg-zum-ersten-go-live)). Was heute in fünf Minuten läuft, ist
+Es gibt noch keinen produktiven Betrieb mit echten Pages-PM-Daten — er
+beginnt erst mit dem kontrollierten Zustandswechsel, der gemeinsamen
+`pm.objects`-Lesesicht, dem SQL-Einstiegswrapper und einem vollständigen
+End-to-End-Nachweis
+([Abschnitt 8](#8-weg-zum-ersten-go-live)). Was heute in fünf Minuten läuft, ist
 der vollständige Migrations- und Testlauf gegen eine Wegwerfdatenbank. Setzt
 Docker voraus.
 
@@ -250,10 +267,9 @@ der verzögerten Prüfung eine gültige Projektzuordnung.
 
 ```
 PostgreSQL
-├── Fachtabellen sind die maßgeblichen Objekte (noch nicht umgesetzt)
-│   ├── pm.issues
-│   ├── pm.kep_lites
-│   └── weitere Vorlagen
+├── Fachtabellen sind die maßgeblichen Objekte
+│   ├── pm.issues (Arbeitsstand; kontrollierter Zustandswechsel fehlt)
+│   └── weitere Facharten werden bei konkretem Bedarf umgesetzt
 ├── pm.object_registry
 │   └── automatisch gepflegte gemeinsame UUID- und Typregistrierung
 ├── gemeinsame Grundlagen
@@ -324,32 +340,38 @@ Einstiege:
 
 **Grundlage** (Sprachen, Register, Bereiche, Herkunft, Beziehungen inkl.
 `depends_on`, Projektzugehörigkeit, Kurzkennungen, Zustände für Projekt und
-Bereich, Grundlage für den Zustandsverlauf) ist umgesetzt. Es folgen, in
-dieser Reihenfolge:
+Bereich, Grundlage für den Zustandsverlauf) und die **Vorgangstabelle** (§7.6)
+mit ihren Regeln über die einzelne Zeile und die Hierarchie sind umgesetzt. Es
+folgen, in dieser Reihenfolge:
 
-1. Vorgangstabelle (§7.6) umsetzen.
-2. `depends_on`-Endpunktregel Vorgang → Vorgang ergänzen.
-3. Zustandswechsel und Zustandsverlauf atomar verbinden.
-4. `pm.objects` als gemeinsame Lesesicht (P-011) ergänzen — sie entsteht
+1. Den kontrollierten Zustandswechsel (`pm.transition_issue()`) umsetzen:
+   zulässige Übergänge, Auslösung der bestehenden Pflichtschwellen,
+   Epos-Sperre, Abhängigkeitsschranke mit begründeter Übergehung,
+   Abschlusssperre bei offenen Kindvorgängen oder unerfüllten
+   Abschlusskriterien — und den Verlaufseintrag in derselben Transaktion
+   schreiben.
+2. `pm.objects` als gemeinsame Lesesicht (P-011) ergänzen — sie entsteht
    bewusst erst nach der Vorgangstabelle, weil sie vorher kaum Inhalt hätte.
-5. Den SQL-Einstiegswrapper (`scripts/write-sql.sh`) bereitstellen:
+3. Den SQL-Einstiegswrapper (`scripts/write-sql.sh`) bereitstellen:
    Verbindung als `editor`, `ON_ERROR_STOP`, transaktionale Ausführung eines
    SQL-Skripts — der erste echte Vorgang soll nicht mehr per Hand in `psql`
    entstehen.
-6. Den ersten echten Pages-PM-Vorgang anlegen.
-7. Die erste tatsächlich benötigte Dokumentvorlage ergänzen — kein
-   Vorratsbau aller angenommenen Facharten.
-8. Einen vollständigen End-to-End-Ablauf durchführen; ausgewählte geprüfte
-   Ausschnitte ersetzen später die vorläufigen Beispiele in dieser README.
-9. Die weitere Entwicklung von Pages PM im System selbst verwalten: die
+4. Den ersten echten Pages-PM-Vorgang anlegen und die für den
+   End-to-End-Nachweis benötigten weiteren Vorgänge erfassen.
+5. Einen vollständigen End-to-End-Ablauf durchführen (§11 der Spezifikation);
+   ausgewählte geprüfte Ausschnitte ersetzen später die vorläufigen Beispiele
+   in dieser README.
+6. Die weitere Entwicklung von Pages PM im System selbst verwalten: die
    nächsten Schema- und Fachumsetzungen als wirkliche Vorgänge erfassen sowie
    benötigte historische Inhalte bedarfsgesteuert übernehmen.
+7. Weitere Facharten ergänzen, sobald ein konkreter Projektablauf sie
+   benötigt — kein Vorratsbau aller angenommenen Facharten.
 
-Danach, als festgelegter (nicht optionaler) weiterer Ausbau: die übrigen
-angenommenen Facharten (§6.1), fortlaufende Erweiterung des End-to-End-Ablaufs
-um ihre wirklichen Arbeitsabläufe, ein minimaler Python-Renderer für GitHub
-Pages, sowie eine geprüfte Rollen-, Rechte- und Nebenläufigkeitsschicht mit
-pytest und psycopg.
+Nach dem ersten Go-live gehören zum festgelegten weiteren Ausbau: die
+fortlaufende Erweiterung des End-to-End-Ablaufs um die wirklichen
+Arbeitsabläufe der jeweils ergänzten Facharten, ein minimaler Python-Renderer
+für GitHub Pages sowie eine geprüfte Rollen-, Rechte- und
+Nebenläufigkeitsschicht mit pytest und psycopg.
 
 ## Lizenz
 

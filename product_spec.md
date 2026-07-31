@@ -210,7 +210,7 @@ unabhängig.
 
 ```text
 geplant       Sprint     Vorlage §7.5 fertig, keine Migration
-Arbeitsstand  KEP-Lite   Tabelle da, verworfene Alternativen fehlen
+Arbeitsstand  Vorgang    Tabelle vorhanden, kontrollierter Zustandswechsel fehlt
 
 nicht wie weit, sondern wo:
 geplant = fertig im Text · Arbeitsstand = angefangen im Code
@@ -1496,8 +1496,8 @@ beide im Reifegrad **Arbeitsstand**, Vorlage in §7.4.
 | Fachgegenstand | Zweck | Kontextquelle und was sie sagt | Vorlage | Reifegrad |
 |---|---|---|---|---|
 | **Sprint** | Ziel und anpassbaren Plan für einen Zeitraum führen. | Scrum Guide 2020: das Sprint Backlog ist ein Plan der Entwickler. | §7.5 | geplant *(Praxis belegt)* |
-| **Vorgang** | Ausführbare Arbeit oder einen steuerbaren Befund führen. | Work-Item-Praxis; Scrum Guide zur Definition of Done. | §7.6 | geplant *(Praxis belegt)* |
-| **KEP-Lite** | Eine Änderung vor ihrer Umsetzung kontrolliert entscheiden. | Kubernetes KEP / Python PEP / Rust RFC. | §7.7 | Arbeitsstand *(Praxis belegt)* |
+| **Vorgang** | Ausführbare Arbeit oder einen steuerbaren Befund führen. | Work-Item-Praxis; Scrum Guide zur Definition of Done. | §7.6 | Arbeitsstand *(Praxis belegt)* |
+| **KEP-Lite** | Eine Änderung vor ihrer Umsetzung kontrolliert entscheiden. | Kubernetes KEP / Python PEP / Rust RFC. | §7.7 | geplant *(Praxis belegt)* |
 | **ADR** | Eine dauerhaft wichtige technische Entscheidung festhalten. | Nygard; MADR. | §7.8 | geplant |
 | **Richtlinie** | Wiederholt geltende Regeln auffindbar halten. | Praxis versionierter Policy-Dokumente; BCP 14. | §7.9 | geplant *(Praxis belegt)* |
 | **Runbook** | Wiederherstellungsschritte unter Druck ausführbar halten. | Google SRE zu Playbooks; AWS Systems Manager. | §7.10 | geplant |
@@ -3244,11 +3244,13 @@ Pages-PM-Gegenstand (P-014, Anhang A.6).
 
 | Beobachtbares Verhalten | Bezug | Kleinstes Beispiel | Grenze am Stichtag |
 |---|---|---|---|
-| Projekte und Hierarchie sind vorhanden. | P-002 | `parent(Pages PM)=Kashasaga` | kein Zustand am Projekt |
-| Bereiche erlauben Mehrfachzuordnung. | P-003 | `areas(X)={build,deploy}` | kein Zustand am Bereich |
+| Projekte und Hierarchie sind vorhanden. | P-002 | `parent(Pages PM)=Kashasaga` | Hierarchie und Projektzustand umgesetzt und getestet |
+| Bereiche erlauben Mehrfachzuordnung. | P-003 | `areas(X)={build,deploy}` | Mehrfachzuordnung und Bereichszustand umgesetzt und getestet |
 | Externe Herkunft besitzt Quelle, Fundstelle und Ausschnitt. | P-006 | `origin(X)=jira:J01-1#comment:4` | vollständig umgesetzt |
-| Beziehungsarten besitzen Richtung, Endpunktregeln und Zyklenprüfung je Art. | P-008, §8.1 | `derived_from` ist konfiguriert | `depends_on` fehlt; `documents` ist zu entfernen |
-| Fachgegenstände erhalten Kennung und Fachart. | P-001 | Registrierung über die Fachtabelle | Kurzkennung fehlt |
+| Beziehungsarten besitzen Richtung, Endpunktregeln und Zyklenprüfung je Art. | P-008, §8.1 | `derived_from` sowie `depends_on` mit Vorgang → Vorgang sind konfiguriert | `documents` ist zu entfernen; die Zustandswechselschranke von `depends_on` fehlt noch |
+| Fachgegenstände erhalten innere Kennung und Fachart. | P-001 | Registrierung über die Fachtabelle | Registrierung mit UUID und Fachart umgesetzt und getestet |
+| Jeder registrierte Fachgegenstand erhält eine Kurzkennung. | P-001, §7.4 | `#a7k2` löst den zugeordneten Gegenstand auf oder nach dessen Löschung keinen | automatische Vergabe, eindeutige Zuordnung und dauerhafte Nichtwiedervergabe umgesetzt und getestet |
+| Zustandsverlaufseinträge können nur ergänzend fortgeschrieben werden. | P-010 | `pm.state_history` führt Sequenz, Zeitpunkt, Akteur, Ereignisart und Pflichtgrund | Nur ergänzbarer Speicher und geschützter Schreibweg umgesetzt; die atomare Verbindung mit dem fachlichen Zustandswechsel fehlt (§10.2) |
 
 **Der einzige Punkt im Reifegrad *aktuell*:**
 
@@ -3258,23 +3260,66 @@ Pages-PM-Gegenstand (P-014, Anhang A.6).
 
 ### 10.2 Arbeitsstand
 
-KEP-Lite ist als erste Fachart begonnen. Gegenüber §7.7 fehlen insbesondere: die
-Pflichtangabe *verworfene Alternativen*, die Prüfregel für den Wechsel nach
-*umgesetzt*, ein betrieblicher Nachweis und wirkliche Pages-PM-Daten.
+Der **Vorgang** (§7.6) ist als erste Fachart begonnen. Vorhanden und getestet
+sind die Fachtabelle, ihre Registrierung im Mindestraster (§7.3), die
+Projektzugehörigkeit, die zyklenfreie Hierarchie mit zulässigen
+Eltern-/Kindarten (Regeln 2 und 3), die Zugehörigkeit von Eltern- und
+Kindvorgang zu demselben Projekt (Regel 4), der `depends_on`-Endpunkt
+Vorgang → Vorgang sowie die Prüfregeln über die einzelne Zeile:
+Pflichtangaben ab *bereit*, das Schema der Abschlusskriterien, die
+Sprachausnahme im Eingang, die dauerhafte Unveränderlichkeit der Vorgangsart
+und die einmal erreichte Schwelle (§7.1.1, Regel 6 – „Rückwege löschen nichts“).
+
+**Die verbleibenden Vorgangsregeln haben einen gemeinsamen Ausführungspunkt:**
+Sie prüfen einen Zustandsübergang im Kontext mehrerer Zeilen oder verbinden ihn
+mit einer Nebenfolge. Sie gehören geschlossen in eine noch nicht vorhandene
+Übergangsfunktion, damit kein fachlicher Schreibweg an ihnen vorbeiführt:
+
+```text
+zulässige Übergänge  die Übergänge aus §7.6 werden noch nicht geprüft
+Abschlussprüfung     der Abschluss wird bei offenen Kindvorgängen oder
+                     nicht erfüllten Abschlusskriterien noch nicht gesperrt
+Regel 5              ein Epos wird nicht gegen eigene Bearbeitung gesperrt
+Regel 12             Abhängigkeitsschranke und begründete Übergehung
+P-010                Zustandswechsel und Verlaufseintrag sind nicht atomar
+                     verbunden
+```
+
+Bis dahin ist der Zustand über den vorgesehenen fachlichen Schreibweg nach der
+Anlage unbeweglich: `editor` besitzt kein Änderungsrecht darauf. Das ist
+gewollt – ein unmittelbares `UPDATE` würde sonst genau die Regeln umgehen, die
+noch fehlen.
+
+**Zwei ausdrückliche Begrenzungen des ersten Go-live:**
+
+*Verantwortung (P-004)* wird noch nicht geführt. Fachliche Identitäten für
+Menschen und Agenten sind nicht modelliert; ein Vorgang kann deshalb weder die
+Bearbeitung ab *in Arbeit* noch die Prüfung ab *in Prüfung* einer
+verantwortlichen Identität zuordnen. Das ist eine befristete, hier benannte
+Abweichung, keine Aufhebung der Anforderung: Das Identitäts- und
+Verantwortungsmodell folgt nach dem ersten vollständigen Vorgangslebenslauf.
+
+*Der Sammelvorgang (§7.6.1)* ist noch nicht benutzbar. Ohne Beiträge,
+Mindesthandlung und Richtlinienverweis wäre er formal anlegbar, aber fachlich
+unvollständig; die zulässigen Vorgangsarten schließen ihn deshalb noch aus.
+
+**KEP-Lite ist nicht begonnen.** Die Fachart steht in §6.1 auf *geplant*: Die
+Vorlage §7.7 ist fertig, eine Migration im maßgeblichen Arbeitsbaum gibt es
+nicht.
 
 ### 10.3 Noch nicht benutzbar
 
 ```text
-Zustandsverlauf (P-010)      keine Verlaufsführung; nur überschreibende
-                             Zeitstempel. §7.5, Regel 6 ist ohne ihn nicht
-                             baubar – die größte einzelne Lücke.
-Kurzkennung (§7.3, §7.4)     keine Entsprechung
-Zustand an Projekt/Bereich   §7.4 verlangt ihn, das Schema hat ihn nicht
-depends_on                   Beziehungsart nicht konfiguriert
-Verantwortung (P-004)        keine Entsprechung
-Schema je Fachart (P-014)    keine Angabe an der Objektart
-Vorgang, Sprint, alle übrigen Facharten, gemeinsame Suche (P-011),
-Renderer und Benutzeroberfläche
+Übergangsfunktion            kontrollierter Zustandswechsel des Vorgangs
+  (§7.6, §10.2)              einschließlich Kontextprüfungen und atomarem
+                             Verlaufseintrag – die größte einzelne Lücke
+gemeinsames Auffinden        die gemeinsame Lesesicht über die Fachtabellen
+  (P-011)                    fehlt
+Verantwortung (P-004)        keine Entsprechung; für den ersten Go-live
+                             ausdrücklich befristet zurückgestellt (§10.2)
+Sammelvorgang (§7.6.1)       als Vorgangsart noch ausgeschlossen (§10.2)
+Sprint, KEP-Lite und die übrigen Facharten, Renderer und
+Benutzeroberfläche
 ```
 
 **Prüfnachweis und Arbeitsdokumentation stehen nicht hier, sondern in §6.2:**
@@ -3289,26 +3334,52 @@ Festlegungen dieser Spezifikation – oder eine begründete Ablösung nach P-010
 
 ## 11. Nächster fachlicher Meilenstein
 
-Ein vollständiger Entscheidungsablauf:
+**Ein vollständiger Vorgangslebenslauf im wirklichen Betrieb** – nicht eine
+weitere Fachart, sondern der erste Gegenstand, der den ganzen Weg geht:
 
 1. Projekt wählen;
-2. echtes KEP-Lite nach §7.7 anlegen, einschließlich mindestens einer
-   verworfenen Alternative;
-3. Entscheidung mit Begründung, Zeitpunkt und Person festhalten;
-4. mindestens einen umsetzenden Vorgang nach §7.6 mit `implements` verbinden;
-5. mindestens ein Annahmekriterium auf *erfüllt* setzen;
-6. den Zusammenhang über das Mindestraster (§7.3) gemeinsam auffinden;
-7. Änderung und Wiederaufnahme später erproben.
+2. Vorgang nach §7.6 im Eingang anlegen;
+3. ihn über die Pflichtschwellen nach *bereit* führen (§7.1.1);
+4. einen zweiten Vorgang als Voraussetzung anlegen und mit `depends_on`
+   verbinden; der Wechsel des abhängigen Vorgangs nach *in Arbeit* wird bei
+   offener Abhängigkeit abgewiesen; den vorausgesetzten Vorgang vollständig
+   durch seinen zulässigen Lebenslauf führen und abschließen; danach gelingt
+   der Wechsel (Regel 12);
+5. einen Kindvorgang anlegen; der Abschluss des Elternvorgangs wird zunächst
+   abgewiesen; danach den Kindvorgang durch seinen zulässigen Lebenslauf
+   führen und abschließen, die Abschlusskriterien des Elternvorgangs erfüllen
+   und den Elternvorgang abschließen; der Abschlusszeitpunkt wird gesetzt
+   (Regel 1);
+6. prüfen, dass abgewiesene Übergänge weder Zustand noch Verlauf verändern,
+   und den Zustandsverlauf der erfolgreichen Wechsel lesen (P-010);
+7. die beteiligten Vorgänge über das gemeinsame Mindestraster auffinden
+   (§7.3, P-011).
 
-**Kontextquelle:** Kubernetes-KEP-Prozess – eine Vorlage gilt erst als
-abgeschlossen, wenn die Umsetzung ausgeliefert und geprüft ist.
+Die in §10.2 benannte befristete Abweichung für Verantwortung bleibt für diesen
+ersten Go-live bestehen; sie ist daher kein Abnahmekriterium dieses
+Meilensteins.
 
-**Der erste Kandidat liegt vor:** das KEP-Lite `vorhaben-schranke` (§7.6, Regel
-12). Es ist keine Erfindung für den Meilenstein, sondern eine Entscheidung, die
-wirklich getroffen wurde.
+**Kontextquelle:** Work-Item-Praxis und der Scrum Guide zur Definition of Done
+(§6.1) – ein Element gilt erst als fertig, wenn es der gemeinsamen
+Fertigstellungsregel genügt.
 
-**Gegenbeispiel:** Ein technisch anlegbares KEP-Lite ohne Entscheidung,
-Umsetzung und Nachweis erfüllt den Meilenstein nicht.
+**Warum keine zweite Fachart davor?** Der Vorgang trägt bereits alle
+Mechanismen, die jede weitere Vorlage später wiederverwendet: Mindestraster,
+Zustände und Schwellen, Beziehungen und Verlauf. Eine zweite Vorlage vor dem
+ersten vollständigen Lebenslauf würde nichts prüfen, was dieser Ablauf nicht
+schon prüft.
+
+**Die übrigen Facharten folgen bei konkretem Bedarf.** Sprint, KEP-Lite, ADR
+und Richtlinie stehen in §6.1 auf *geplant*; keine von ihnen ist Voraussetzung
+dieses Meilensteins. Eine Fachart wird umgesetzt, sobald ein wirklicher
+Projektablauf sie benötigt (§12.5). Dasselbe gilt für die Vorhaben-Schranke
+(§7.6, Regel 11): Die Entscheidung bleibt fachlich gültig; ihre technische
+Umsetzung erfolgt zusammen mit der benötigten Sprint-Unterstützung.
+
+**Gegenbeispiel:** Ein technisch anlegbarer Vorgang ohne geprüften
+Zustandswechsel, ohne Verlauf und ohne gemeinsames Auffinden erfüllt den
+Meilenstein nicht – ein grüner Testlauf über eine Tabelle ist kein Nachweis
+eines Ablaufs (§2).
 
 ---
 
