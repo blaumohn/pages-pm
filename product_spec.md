@@ -2141,6 +2141,17 @@ werden.
    zulässig    Kashasaga/#7c40 depends_on pcs-php/#2e91
    ```
 5. Ein *Epos* wird nicht selbst bearbeitet; sein Abschluss folgt aus den Kindern.
+
+   „Nicht selbst bearbeitet“ schließt die Zustände *in Arbeit* und *in Prüfung*
+   nicht aus. Diese Zustände beschreiben den Fortschritt und die Beurteilung des
+   durch die Kinder gegliederten Gesamtumfangs. Das Epos folgt der gewöhnlichen
+   Übergangstabelle; §9.3 zeigt ein Epos im Zustand *in Arbeit*.
+
+   Ein *Epos* darf nur abgeschlossen werden, wenn es mindestens einen
+   Kindvorgang besitzt und alle seine Kinder *abgeschlossen* oder *verworfen*
+   sind. Ohne Kinder besteht nichts, aus dessen Abschluss sein eigener folgen
+   könnte — ein Epos ohne Zerlegung ist ein Vorgang der falschen Art, kein
+   abgeschlossenes Epos.
 6. *Blockiert* ohne Blockadegrund ist unzulässig.
 7. Eine gesetzte Sprintrolle ohne Sprintauswahl ist unzulässig.
 8. Die Sprintauswahl darf wechseln; der Wechsel nimmt den Vorgang **nicht** aus
@@ -3269,26 +3280,41 @@ Vorgang → Vorgang sowie die Prüfregeln über die einzelne Zeile:
 Pflichtangaben ab *bereit*, das Schema der Abschlusskriterien, die
 Sprachausnahme im Eingang, die dauerhafte Unveränderlichkeit der Vorgangsart
 und die einmal erreichte Schwelle (§7.1.1, Regel 6 – „Rückwege löschen nichts“).
+Hinzu kommt der kontrollierte Zustandswechsel `pm.transition_issue()` mit den
+Regeln, die einen Übergang im Zusammenhang mit anderen Vorgängen und dem
+Zustandsverlauf prüfen (siehe unten).
 
-**Die verbleibenden Vorgangsregeln haben einen gemeinsamen Ausführungspunkt:**
-Sie prüfen einen Zustandsübergang im Kontext mehrerer Zeilen oder verbinden ihn
-mit einer Nebenfolge. Sie gehören geschlossen in eine noch nicht vorhandene
-Übergangsfunktion, damit kein fachlicher Schreibweg an ihnen vorbeiführt:
+**Die übrigen Vorgangsregeln haben einen gemeinsamen Ausführungspunkt:** Sie
+prüfen einen Zustandsübergang im Kontext mehrerer Zeilen oder verbinden ihn mit
+einer Nebenfolge. Sie liegen geschlossen in `pm.transition_issue()`, damit kein
+fachlicher Schreibweg an ihnen vorbeiführt:
 
 ```text
-zulässige Übergänge  die Übergänge aus §7.6 werden noch nicht geprüft
-Abschlussprüfung     der Abschluss wird bei offenen Kindvorgängen oder
-                     nicht erfüllten Abschlusskriterien noch nicht gesperrt
-Regel 5              ein Epos wird nicht gegen eigene Bearbeitung gesperrt
-Regel 12             Abhängigkeitsschranke und begründete Übergehung
-P-010                Zustandswechsel und Verlaufseintrag sind nicht atomar
-                     verbunden
+zulässige Übergänge  die Übergänge aus §7.6 werden über eine abfragbare
+                     Tabelle geprüft
+Abschlussprüfung     bei offenen Kindvorgängen oder nicht erfüllten
+                     Abschlusskriterien gesperrt
+Regel 5              das Epos folgt der gewöhnlichen Übergangstabelle;
+                     sein Abschluss verlangt mindestens einen Kindvorgang
+Regel 12             Abhängigkeitsschranke mit begründeter Übergehung,
+                     als eigener Verlaufseintrag geführt
+P-010                Zustand und Zeitpunkte werden geändert und der
+                     Verlaufseintrag wird im selben Funktionsaufruf und
+                     in derselben Transaktion ergänzt; bei einem Fehler
+                     wird alles gemeinsam zurückgerollt
 ```
 
-Bis dahin ist der Zustand über den vorgesehenen fachlichen Schreibweg nach der
-Anlage unbeweglich: `editor` besitzt kein Änderungsrecht darauf. Das ist
-gewollt – ein unmittelbares `UPDATE` würde sonst genau die Regeln umgehen, die
-noch fehlen.
+`editor` darf den Zustand nicht unmittelbar ändern. Zustandswechsel erfolgen
+ausschließlich über `pm.transition_issue()`, für die `editor` das
+Ausführungsrecht besitzt. Auch `finished_at` darf `editor` nicht unmittelbar
+ändern; der Zeitpunkt wird ausschließlich durch die Übergangsfunktion bei einem
+Wechsel in einen endgültigen Zustand gesetzt.
+
+Der Blockadegrund bleibt dagegen unmittelbar änderbar: Er kann sich während
+derselben Blockade sachlich ändern, ohne dass ein Zustandswechsel stattfindet.
+
+**Noch nicht geprüft wird Regel 11 (Vorhaben-Schranke).** Sie setzt den Sprint
+voraus, der nicht Teil des ersten Go-live ist.
 
 **Zwei ausdrückliche Begrenzungen des ersten Go-live:**
 
@@ -3310,11 +3336,8 @@ nicht.
 ### 10.3 Noch nicht benutzbar
 
 ```text
-Übergangsfunktion            kontrollierter Zustandswechsel des Vorgangs
-  (§7.6, §10.2)              einschließlich Kontextprüfungen und atomarem
-                             Verlaufseintrag – die größte einzelne Lücke
 gemeinsames Auffinden        die gemeinsame Lesesicht über die Fachtabellen
-  (P-011)                    fehlt
+  (P-011)                    fehlt – die größte einzelne Lücke
 Verantwortung (P-004)        keine Entsprechung; für den ersten Go-live
                              ausdrücklich befristet zurückgestellt (§10.2)
 Sammelvorgang (§7.6.1)       als Vorgangsart noch ausgeschlossen (§10.2)

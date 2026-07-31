@@ -24,11 +24,10 @@ Policy #4d1a governs its completion
 depends_on #4c19 is checked before "in progress"
 ```
 
-> **Status:** The shared PostgreSQL foundation and the issue table with its
-> integrity rules are implemented and tested. That does not make the issue
-> operational yet: the controlled state transition and the shared read view
-> are missing. Next up is the transition function; the path to the first
-> go-live is
+> **Status:** The shared PostgreSQL foundation, the issue table with its
+> integrity rules, and the controlled state transition are implemented and
+> tested. That does not make the issue operational yet: the shared read view
+> is missing. Next up is `pm.objects`; the path to the first go-live is
 > [further below](#8-path-to-the-first-go-live). The examples below show
 > the intended interplay, not the current state.
 
@@ -132,9 +131,8 @@ invalid relation (e.g. depends_on pointing at the wrong object type)
 a multi-step operation with one failing step
 → rolled back entirely
 
-after the transition function is implemented:
 moving to “in progress” while a dependency is open
-→ rejected
+→ rejected unless an override reason is given
 ```
 
 [Shared product rules](product_spec.md#4-gemeinsame-produktregeln) ·
@@ -153,7 +151,7 @@ it, and from then on maintained under the same rules as new content.
 The full walkthrough with real short IDs and timestamps is in the
 [product specification, §0.5](product_spec.md#05-ein-fall-von-anfang-bis-ende)
 (German only). ADR and policy are not yet implemented as domain tables; the
-issue exists but does not yet carry a controlled state transition. The
+issue itself, including its controlled state transition, is implemented. The
 examples above show the intended interplay that every upcoming migration is
 checked against.
 
@@ -197,13 +195,14 @@ Implemented and tested today:
 - states for projects and areas;
 - the shared foundation for the state history;
 - the issue table with its single-row rules, the acyclic hierarchy, and the
-  requirement that parent and child issue belong to the same project.
+  requirement that parent and child issue belong to the same project;
+- the controlled state transition of an issue (permitted transitions,
+  dependency barrier with a justified override, an epic's completion barrier
+  requiring at least one child, and the completion barrier for open child
+  issues or unfulfilled completion criteria), atomically linked with the
+  state history.
 
-Not yet implemented: the controlled state transition of an issue (permitted
-transitions, dependency barrier with a justified override, the rule that an
-epic is not worked on itself, and the completion barrier for open child
-issues or unfulfilled completion criteria) and its atomic link with the state
-history, the shared `pm.objects` read view, the domain tables for the
+Not yet implemented: the shared `pm.objects` read view, the domain tables for the
 remaining planned domain types, and the Python renderer for GitHub Pages. For
 the first go-live an issue deliberately carries no responsible identity yet
 (§10.2 of the specification). Sprint is deliberately excluded from the first
@@ -236,8 +235,8 @@ the schema migration of their respective domain table.
 ## 5. Get started in five minutes
 
 Pages PM is not yet in production with real data — production begins with
-the controlled state transition, the shared `pm.objects` read view, the SQL
-entry-point wrapper, and full end-to-end verification
+the shared `pm.objects` read view, the SQL entry-point wrapper, and full
+end-to-end verification
 ([section 8](#8-path-to-the-first-go-live)). What runs today in five minutes
 is the full migration and test run against a disposable database. Requires
 Docker.
@@ -261,7 +260,7 @@ assignment by the time of the deferred check at the latest.
 ```
 PostgreSQL
 ├── domain tables are the authoritative objects
-│   ├── pm.issues (work in progress; controlled state transition missing)
+│   ├── pm.issues (work in progress; controlled state transition implemented)
 │   └── further domain types are implemented on concrete demand
 ├── pm.object_registry
 │   └── automatically maintained shared UUID and type registration
@@ -331,29 +330,30 @@ Targeted entry points:
 
 **Foundation** (languages, registry, areas, provenance, relations incl.
 `depends_on`, project membership, short IDs, states for projects and areas,
-foundation for the state history) and the **issue table** (§7.6) with its
-single-row and hierarchy rules are implemented. What follows, in this order:
+foundation for the state history), the **issue table** (§7.6) with its
+single-row and hierarchy rules, and the **controlled state transition**
+(`pm.transition_issue()`: permitted transitions, triggering of the existing
+required-field thresholds, the dependency barrier with a justified override,
+an epic's completion barrier requiring at least one child, the completion
+barrier for open child issues or unfulfilled completion criteria, and the
+history entry written in the same transaction) are implemented. What follows,
+in this order:
 
-1. Implement the controlled state transition (`pm.transition_issue()`):
-   permitted transitions, triggering of the existing required-field
-   thresholds, the epic barrier, the dependency barrier with a justified
-   override, and the completion barrier for open child issues or unfulfilled
-   completion criteria — writing the history entry in the same transaction.
-2. Add `pm.objects` as the shared read view (P-011) — deliberately built
+1. Add `pm.objects` as the shared read view (P-011) — deliberately built
    only after the issue table, since it would have little content before
    that.
-3. Provide the SQL entry-point wrapper (`scripts/write-sql.sh`): connects as
+2. Provide the SQL entry-point wrapper (`scripts/write-sql.sh`): connects as
    `editor`, `ON_ERROR_STOP`, transactional execution of a SQL script — the
    first real issue should no longer be created by hand in `psql`.
-4. Create the first real Pages PM issue and record the further issues needed
+3. Create the first real Pages PM issue and record the further issues needed
    for end-to-end verification.
-5. Carry out a full end-to-end walkthrough (§11 of the specification);
+4. Carry out a full end-to-end walkthrough (§11 of the specification);
    selected, verified excerpts later replace the placeholder examples in this
    README.
-6. Manage Pages PM's own further development within the system itself:
+5. Manage Pages PM's own further development within the system itself:
    track the next schema and domain work as real issues, and migrate needed
    historical content on demand.
-7. Add further domain types once a concrete project workflow needs them — no
+6. Add further domain types once a concrete project workflow needs them — no
    stockpiling of every accepted domain type.
 
 After the first go-live, the defined further expansion comprises:

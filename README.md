@@ -25,12 +25,11 @@ Richtlinie #4d1a gilt für seinen Abschluss
 depends_on #4c19 wird vor „in Arbeit“ geprüft
 ```
 
-> **Stand:** Die gemeinsame PostgreSQL-Grundlage und die Vorgangstabelle mit
-> ihren Integritätsregeln sind umgesetzt und getestet. Betriebsbereit ist der
-> Vorgang damit noch nicht: Der kontrollierte Zustandswechsel und die
-> gemeinsame Lesesicht fehlen. Als Nächstes folgt die Übergangsfunktion; der
-> Weg zum ersten Go-live steht
-> [weiter unten](#8-weg-zum-ersten-go-live). Die folgenden Beispiele zeigen
+> **Stand:** Die gemeinsame PostgreSQL-Grundlage, die Vorgangstabelle mit ihren
+> Integritätsregeln und der kontrollierte Zustandswechsel sind umgesetzt und
+> getestet. Betriebsbereit ist der Vorgang damit noch nicht: Die gemeinsame
+> Lesesicht fehlt. Als Nächstes folgt `pm.objects`; der Weg zum ersten Go-live
+> steht [weiter unten](#8-weg-zum-ersten-go-live). Die folgenden Beispiele zeigen
 > das vorgesehene Zusammenspiel, nicht den Ist-Zustand.
 
 ## 1. Was ich gesucht habe – und was Pages PM daraus macht
@@ -134,9 +133,8 @@ unzulässige Beziehung (z. B. depends_on auf falsche Objektart)
 mehrteiliger Auftrag mit einem Fehler
 → vollständig zurückgerollt
 
-nach Umsetzung der Übergangsfunktion:
 Wechsel nach „in Arbeit“ bei offener Abhängigkeit
-→ abgewiesen
+→ abgewiesen, solange kein Übergehungsgrund angegeben wird
 ```
 
 [Gemeinsame Produktregeln](product_spec.md#4-gemeinsame-produktregeln) ·
@@ -156,7 +154,7 @@ Inhalte fortgeschrieben.
 Der vollständige Ablauf mit echten Kurzkennungen und Zeitpunkten steht in der
 [Produktspezifikation, §0.5](product_spec.md#05-ein-fall-von-anfang-bis-ende).
 ADR und Richtlinie sind als Fachtabellen noch nicht umgesetzt; der Vorgang ist
-vorhanden, trägt aber noch keinen kontrollierten Zustandswechsel. Die Beispiele
+einschließlich seines kontrollierten Zustandswechsels vorhanden. Die Beispiele
 oben zeigen das vorgesehene Zusammenspiel, gegen das jede kommende Migration
 geprüft wird.
 
@@ -201,14 +199,14 @@ Umgesetzt und getestet sind derzeit:
 - die gemeinsame Grundlage für den Zustandsverlauf;
 - die Vorgangstabelle mit ihren Regeln über die einzelne Zeile, der
   zyklenfreien Hierarchie und der Zugehörigkeit von Eltern- und Kindvorgang
-  zu demselben Projekt.
+  zu demselben Projekt;
+- der kontrollierte Zustandswechsel des Vorgangs (zulässige Übergänge,
+  Abhängigkeitsschranke mit begründeter Übergehung, Epos-Abschluss nur bei
+  mindestens einem Kind sowie Abschlusssperre bei offenen Kindvorgängen oder
+  unerfüllten Abschlusskriterien), atomar verbunden mit dem Zustandsverlauf.
 
-Noch nicht umgesetzt: der kontrollierte Zustandswechsel des Vorgangs
-(zulässige Übergänge, Abhängigkeitsschranke mit begründeter Übergehung,
-Epos-Sperre sowie Abschlusssperre bei offenen Kindvorgängen oder unerfüllten
-Abschlusskriterien) und seine atomare Verbindung mit dem Zustandsverlauf,
-die gemeinsame `pm.objects`-Lesesicht, die Fachtabellen für die weiteren
-geplanten Facharten sowie der Python-Renderer für GitHub Pages. Eine
+Noch nicht umgesetzt: die gemeinsame `pm.objects`-Lesesicht, die Fachtabellen
+für die weiteren geplanten Facharten sowie der Python-Renderer für GitHub Pages. Eine
 verantwortliche Identität führt der Vorgang für den ersten Go-live bewusst
 noch nicht (§10.2 der Spezifikation). Sprint gehört bewusst nicht zum ersten
 Go-live (§12.5) — es wird erst umgesetzt, sobald ein konkreter Projektablauf
@@ -241,9 +239,8 @@ der Schema-Migration ihrer jeweiligen Fachtabelle.
 ## 5. In fünf Minuten starten
 
 Es gibt noch keinen produktiven Betrieb mit echten Pages-PM-Daten — er
-beginnt erst mit dem kontrollierten Zustandswechsel, der gemeinsamen
-`pm.objects`-Lesesicht, dem SQL-Einstiegswrapper und einem vollständigen
-End-to-End-Nachweis
+beginnt erst mit der gemeinsamen `pm.objects`-Lesesicht, dem
+SQL-Einstiegswrapper und einem vollständigen End-to-End-Nachweis
 ([Abschnitt 8](#8-weg-zum-ersten-go-live)). Was heute in fünf Minuten läuft, ist
 der vollständige Migrations- und Testlauf gegen eine Wegwerfdatenbank. Setzt
 Docker voraus.
@@ -268,7 +265,7 @@ der verzögerten Prüfung eine gültige Projektzuordnung.
 ```
 PostgreSQL
 ├── Fachtabellen sind die maßgeblichen Objekte
-│   ├── pm.issues (Arbeitsstand; kontrollierter Zustandswechsel fehlt)
+│   ├── pm.issues (Arbeitsstand; kontrollierter Zustandswechsel umgesetzt)
 │   └── weitere Facharten werden bei konkretem Bedarf umgesetzt
 ├── pm.object_registry
 │   └── automatisch gepflegte gemeinsame UUID- und Typregistrierung
@@ -340,31 +337,30 @@ Einstiege:
 
 **Grundlage** (Sprachen, Register, Bereiche, Herkunft, Beziehungen inkl.
 `depends_on`, Projektzugehörigkeit, Kurzkennungen, Zustände für Projekt und
-Bereich, Grundlage für den Zustandsverlauf) und die **Vorgangstabelle** (§7.6)
-mit ihren Regeln über die einzelne Zeile und die Hierarchie sind umgesetzt. Es
-folgen, in dieser Reihenfolge:
+Bereich, Grundlage für den Zustandsverlauf), die **Vorgangstabelle** (§7.6) mit
+ihren Regeln über die einzelne Zeile und die Hierarchie sowie der
+**kontrollierte Zustandswechsel** (`pm.transition_issue()`: zulässige
+Übergänge, Auslösung der bestehenden Pflichtschwellen, Abhängigkeitsschranke
+mit begründeter Übergehung, Epos-Abschluss nur bei mindestens einem Kind,
+Abschlusssperre bei offenen Kindvorgängen oder unerfüllten
+Abschlusskriterien sowie Verlaufseintrag in derselben Transaktion) sind
+umgesetzt. Es folgen, in dieser Reihenfolge:
 
-1. Den kontrollierten Zustandswechsel (`pm.transition_issue()`) umsetzen:
-   zulässige Übergänge, Auslösung der bestehenden Pflichtschwellen,
-   Epos-Sperre, Abhängigkeitsschranke mit begründeter Übergehung,
-   Abschlusssperre bei offenen Kindvorgängen oder unerfüllten
-   Abschlusskriterien — und den Verlaufseintrag in derselben Transaktion
-   schreiben.
-2. `pm.objects` als gemeinsame Lesesicht (P-011) ergänzen — sie entsteht
+1. `pm.objects` als gemeinsame Lesesicht (P-011) ergänzen — sie entsteht
    bewusst erst nach der Vorgangstabelle, weil sie vorher kaum Inhalt hätte.
-3. Den SQL-Einstiegswrapper (`scripts/write-sql.sh`) bereitstellen:
+2. Den SQL-Einstiegswrapper (`scripts/write-sql.sh`) bereitstellen:
    Verbindung als `editor`, `ON_ERROR_STOP`, transaktionale Ausführung eines
    SQL-Skripts — der erste echte Vorgang soll nicht mehr per Hand in `psql`
    entstehen.
-4. Den ersten echten Pages-PM-Vorgang anlegen und die für den
+3. Den ersten echten Pages-PM-Vorgang anlegen und die für den
    End-to-End-Nachweis benötigten weiteren Vorgänge erfassen.
-5. Einen vollständigen End-to-End-Ablauf durchführen (§11 der Spezifikation);
+4. Einen vollständigen End-to-End-Ablauf durchführen (§11 der Spezifikation);
    ausgewählte geprüfte Ausschnitte ersetzen später die vorläufigen Beispiele
    in dieser README.
-6. Die weitere Entwicklung von Pages PM im System selbst verwalten: die
+5. Die weitere Entwicklung von Pages PM im System selbst verwalten: die
    nächsten Schema- und Fachumsetzungen als wirkliche Vorgänge erfassen sowie
    benötigte historische Inhalte bedarfsgesteuert übernehmen.
-7. Weitere Facharten ergänzen, sobald ein konkreter Projektablauf sie
+6. Weitere Facharten ergänzen, sobald ein konkreter Projektablauf sie
    benötigt — kein Vorratsbau aller angenommenen Facharten.
 
 Nach dem ersten Go-live gehören zum festgelegten weiteren Ausbau: die
