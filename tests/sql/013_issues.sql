@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(55);
+SELECT plan(57);
 
 SELECT has_table('pm', 'issues', 'pm.issues existiert');
 SELECT has_table('pm', 'issue_hierarchy_rules', 'pm.issue_hierarchy_rules existiert');
@@ -703,6 +703,62 @@ SELECT throws_ok(
                '00000000-0000-0000-0000-000000000281', 'depends_on') $$,
     '23514', NULL,
     'depends_on in Gegenrichtung, die einen Zyklus schließt, wird abgelehnt'
+);
+
+-- 56-57: Mehrgliedriger depends_on-Zyklus zwischen Vorgängen.
+-- Migration 007 prüft die generische Zyklenlogik; dieser Fall weist nach,
+-- dass sie auch für den in Migration 013 ergänzten Endpunkt
+-- depends_on: issue -> issue gilt. Bestehende Kante: 281 -> 280.
+INSERT INTO pm.issues (
+    id,
+    title,
+    description,
+    state,
+    issue_kind
+) VALUES (
+    '00000000-0000-0000-0000-000000000282',
+    '{"de": "Titeltext"}'::jsonb,
+    '{"de": "Titeltext"}'::jsonb,
+    'inbox',
+    'task'
+);
+
+INSERT INTO pm.object_projects (object_id, project_id)
+VALUES (
+    '00000000-0000-0000-0000-000000000282',
+    (SELECT id
+       FROM pm.projects
+      WHERE key = 'test_issue_project_a')
+);
+
+-- 56
+SELECT lives_ok(
+    $$ INSERT INTO pm.object_relations (
+           source_id,
+           target_id,
+           relation_type
+       ) VALUES (
+           '00000000-0000-0000-0000-000000000280',
+           '00000000-0000-0000-0000-000000000282',
+           'depends_on'
+       ) $$,
+    'depends_on-Kante 280 -> 282 erweitert die Kette 281 -> 280 -> 282'
+);
+
+-- 57
+SELECT throws_ok(
+    $$ INSERT INTO pm.object_relations (
+           source_id,
+           target_id,
+           relation_type
+       ) VALUES (
+           '00000000-0000-0000-0000-000000000282',
+           '00000000-0000-0000-0000-000000000281',
+           'depends_on'
+       ) $$,
+    '23514',
+    NULL,
+    'depends_on-Zyklus 281 -> 280 -> 282 -> 281 wird abgelehnt'
 );
 
 SELECT * FROM finish();
