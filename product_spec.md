@@ -11,25 +11,8 @@ trägt deshalb die Angaben, die sie dort verlangt (§7.3).
 | **Projekt** | Pages PM |
 | **Zustand** | *gültig* |
 | **Pflege** | Dani (Mensch) |
-| **Fassung** | 7 |
-| **Angelegt / Geändert am** | 26. Juli 2026 / 29. Juli 2026 |
-| **Ist-Stichtag** | Arbeitsbaum von `../pages-pm` am 29. Juli 2026 |
+| **Ist-Stichtag** | Arbeitsbaum von `../pages-pm` am 2. August 2026 (`fabac88`) |
 | **Zielgruppe** | kleine Teams, eine bis fünf aktiv mitarbeitende Personen |
-| **Zustandsverlauf** | siehe §12.3 |
-
-> **Neu in Fassung 7.** Sechs Entscheidungen ändern den Zuschnitt:
-> **(1)** **Projekt und Bereich sind Rahmen**, keine Fachgegenstände – sie
-> tragen keine Kennung im Objektgraphen und sind kein Endpunkt einer Kante.
-> Damit hat Pages PM **zwölf Facharten und zwei Rahmen**.
-> **(2)** P-014 kennt **drei Auflösungsstufen**: Objektgraph, geführte
-> Nebenfolge, dynamisches Feld mit Schema.
-> **(3)** `documents` und `verifies` entfallen; **vier Beziehungsarten**
-> bleiben.
-> **(4)** Die **Größenbremse** (§7.6, Regel 16) ist der Auslöser des
-> Vorlagensystems: Ein zu großer Vorgang ist meist eine fehlende Entscheidung.
-> **(5)** Regelschlüssel entfallen – das Kennzeichen bleibt die Nummer.
-> **(6)** Drift-Bericht und Feature-Matrix sind angenommen.
-> Vollständig in §12.3.
 
 ---
 
@@ -497,7 +480,7 @@ parent(V2) = V1
 
 ### P-004 – Verantwortung (Soll; der Zirkel ist ein Muss)
 
-**Ohne diese Regel** *(konstruiert; offen – Archiv-PM, §12.4)*
+**Ohne diese Regel** *(konstruiert; offen – Archiv-PM, §12.3)*
 
 ```text
 Bearbeitung(#9e2b) = Agent-1
@@ -642,7 +625,7 @@ Pflichtsprachen = {de, en}
 Titel = {de: "Test", en: "Test"}
 ```
 
-**Gegenbeispiel** *(konstruiert; offen – Archiv-PM, §12.4)*
+**Gegenbeispiel** *(konstruiert; offen – Archiv-PM, §12.3)*
 
 ```text
 Titel = {de: "Fallback-Kette umsetzen", en: "TODO"}
@@ -756,7 +739,7 @@ hervorgegangen.
 
 ### P-008 – Typisierte Beziehungen (Muss)
 
-**Ohne diese Regel** *(offen – Archiv-PM, §12.4)*
+**Ohne diese Regel** *(offen – Archiv-PM, §12.3)*
 
 ```text
 #9e2b  relates to  KEP-Lite #8c21
@@ -947,7 +930,7 @@ Zustandsverlauf #7c40                                  Änderungsart
 
 „War #7c40 am 08-06 in Arbeit?“  → Zeile [2]     ✓
 „Einmal durchgefallen?“          → Zeile [4]     ✓
-„Welches Kriterium?“             → steht nicht da (§12.5)
+„Welches Kriterium?“             → steht nicht da (§12.4)
 
 [1] bis [5] sind Platznummern in der Nebenfolge, keine Gegenstände.
 Eine Kante zeigt auf #7c40, nie auf [4].
@@ -958,7 +941,7 @@ nicht.
 
 ### P-011 – Gemeinsames Auffinden (Muss)
 
-**Ohne diese Regel** *(offen – Archiv-PM, §12.4)*
+**Ohne diese Regel** *(offen – Archiv-PM, §12.3)*
 
 ```text
 Ansicht „KEP-Lites“   → #8c21
@@ -1216,7 +1199,7 @@ nach P-012 zu prüfen.
 
 ### A – Kleine direkte Änderung
 
-**Ohne diesen Ablauf** *(offen – Archiv-PM, §12.4; der Scrum Guide ist beispielfrei)*
+**Ohne diesen Ablauf** *(offen – Archiv-PM, §12.3; der Scrum Guide ist beispielfrei)*
 
 ```text
 Variante 1 – jede Kleinigkeit bekommt ein KEP-Lite:
@@ -1342,7 +1325,7 @@ von Hand gepflegte Schrittliste wäre eine zweite, abweichbare Wahrheit.
 
 ### D – Sprint planen und fortschreiben
 
-**Ohne diesen Ablauf** *(offen – Archiv-PM, §12.4; der Scrum Guide sagt zur Vollständigkeit des Ist-Umfangs nichts)*
+**Ohne diesen Ablauf** *(offen – Archiv-PM, §12.3; der Scrum Guide sagt zur Vollständigkeit des Ist-Umfangs nichts)*
 
 ```text
 Sprint enthält nur ausgewählte Arbeit:
@@ -1502,14 +1485,14 @@ beide im Reifegrad **Arbeitsstand**, Vorlage in §7.4.
 | **Richtlinie** | Wiederholt geltende Regeln auffindbar halten. | Praxis versionierter Policy-Dokumente; BCP 14. | §7.9 | geplant *(Praxis belegt)* |
 | **Runbook** | Wiederherstellungsschritte unter Druck ausführbar halten. | Google SRE zu Playbooks; AWS Systems Manager. | §7.10 | geplant |
 | **Postmortem** | Aus folgenreichen Störungen lernen. | Google SRE, Postmortem-Kultur. | §7.11 | geplant |
-| **Drift-Bericht** | Mehrere Soll-Ist-Abweichungen gemeinsam bewerten. | Drift-Erkennung in IaC-Werkzeugen: die Sammelansicht ist die Leistung. | §7.12 | geplant *(Beleg ausstehend, §12.4)* |
-| **Feature-Matrix** | Varianten über mehrere Merkmale vergleichen. | Vergleichstabellen in Produktentscheidungen. | §7.13 | geplant *(Beleg ausstehend, §12.4)* |
+| **Drift-Bericht** | Mehrere Soll-Ist-Abweichungen gemeinsam bewerten. | Drift-Erkennung in IaC-Werkzeugen: die Sammelansicht ist die Leistung. | §7.12 | geplant *(Beleg ausstehend, §12.3)* |
+| **Feature-Matrix** | Varianten über mehrere Merkmale vergleichen. | Vergleichstabellen in Produktentscheidungen. | §7.13 | geplant *(Beleg ausstehend, §12.3)* |
 | **Testmatrix** | Kombinationen vollständig sichtbar machen. | Kombinatorische Testpraxis (NIST). | §7.14 | geplant |
 | **System-Spezifikation** | Gemeinsames fachliches System-Soll festhalten. | arc42, Bausteinsicht und Querschnittliche Konzepte. | §7.15 | geplant *(Praxis belegt)* |
 | **Ablauf-Spezifikation** | Normal-, Fehler- und Ausnahmeabläufe festlegen. | arc42, Laufzeitsicht. | §7.16 | geplant |
 
 **Zwei Facharten tragen einen ausstehenden Beleg.** Beide Prüffragen liegen bei
-der archivierten PM (§12.4). Bleibt eine Antwort leer, fällt die Art auf
+der archivierten PM (§12.3). Bleibt eine Antwort leer, fällt die Art auf
 *empfohlen* zurück.
 
 | Art | Prüffrage nach P-012 |
@@ -1623,6 +1606,81 @@ ist. Es gelten sechs Regeln:
 **Kosten:** Die Gültigkeit ist nicht mehr am einzelnen Feld ablesbar.
 
 **Gegenbeispiel:** Eine Schwelle senkt nie eine Muss-Regel aus §4 auf Dauer ab.
+
+**Zu Regel 6:** Die Schwelle ist erreicht, sobald sie **einmal** erreicht war.
+Sie ist damit nicht am gegenwärtigen Zustand ablesbar: Ein Vorgang, der von
+*bereit* nach *in Klärung* zurückgeht (§7.1.2), bleibt an die einmal erreichte
+Untergrenze gebunden. Fällt ein Gegenstand vor der Schwelle heraus – etwa ein
+unmittelbar aus dem *Eingang* verworfener Vorgang –, hat er sie nie erreicht.
+
+#### 7.1.2 Übergänge nur bei fachlichem Grund einschränken
+
+**Ohne diese Regel** *(belegt: Open Guide to Kanban v2025.7 – der Arbeitsfluss
+wird definiert und aufgrund empirischer Erkenntnisse weiterentwickelt; Jira und
+OpenProject – Übergänge sind gerichtete, je Richtung konfigurierbare Kanten)*
+
+*Was die Quellen tragen:* dass der Arbeitsfluss definiert und aufgrund
+empirischer Erkenntnisse weiterentwickelt wird und dass verbreitete Werkzeuge
+gerichtete Übergänge je Richtung ausdrücken
+können – damit auch Rückwege –, nicht, dass eine bestimmte Kante erlaubt sein
+muss. Die normative Begründung kommt aus dem
+Pages-PM-Betriebsfall selbst:
+
+```text
+Ein Vorgang gilt als bereit.
+Eine Grundfrage wird wieder offen.
+Der Rückweg nach in Klärung fehlt.
+
+→ er bleibt fälschlich bereit,
+  oder er heißt blockiert, obwohl nichts hakt,
+  oder es entsteht ein zweiter Vorgang für dieselbe Arbeit.
+
+Drei Wege, und alle drei sagen etwas Unwahres.
+```
+
+**Aufgabe:** Die Übergangstabelle soll fachlich Unmögliches verhindern, nicht
+gewöhnliche Richtungswechsel. Pages PM schreibt weder Scrum noch Kanban
+vollständig vor (§3.2); ein erzwungen linearer Lebenslauf wäre eine solche
+Vorschrift durch die Hintertür.
+
+**Festlegung:**
+
+1. **Ein Zustand ist eine Tatsachenbehauptung, keine Wegmarke.** Die
+   Übergangstabelle muss zulassen, dass der gegenwärtige fachliche Sachverhalt
+   wahrheitsgemäß ausgedrückt wird.
+2. **Die Beweislast liegt beim Verbot eines fachlich möglichen Rück- oder
+   Seitenwegs.** Ist der Zielzustand für denselben Gegenstand sachlich
+   erreichbar, wird die Kante nur bei benanntem Schaden verboten – und der
+   Grund steht in der Vorlage. Die Regel verlangt **keinen** vollständigen
+   Graphen: Ein Sprung, dessen Zielzustand für den Gegenstand gar nicht wahr
+   sein kann, bleibt ausgeschlossen, ohne dass es dafür eines Schadens bedarf.
+
+   ```text
+   zulassen    bereit → in Klärung
+               Rückweg, Zielzustand ist wahr, kein Schaden benannt
+   ausschließen
+               Eingang → in Prüfung
+               nichts wurde bearbeitet, es gibt nichts zu prüfen
+   ```
+3. **Endgültigkeit ist eine eigene Entscheidung.** Sie folgt nicht daraus, dass
+   ein Zustand spät im üblichen Ablauf steht, und sie wird je Zustand einzeln
+   begründet.
+4. **Schwelle und Zustand sind zwei Aussagen.** Ein Rückweg senkt keine einmal
+   erreichte Pflichtschwelle (§7.1.1, Regel 6); umgekehrt bindet eine erreichte
+   Schwelle den Gegenstand nicht an den Zustand, in dem er sie erreicht hat.
+
+**Kosten:** Der Verlauf wird länger und weniger vorhersagbar. Aus dem
+gegenwärtigen Zustand ist nicht mehr ablesbar, was ein Gegenstand schon hinter
+sich hat; wer das wissen will, liest den Verlauf (P-010) – wofür er geführt
+wird.
+
+**Gegenbeispiel:** „Du warst schon eingeplant, deshalb darfst du nicht mehr
+ungeklärt sein“ ist keine fachliche Regel, sondern eine Prozessfessel.
+
+**Reichweite am Stichtag:** Die Regel ist für den Vorgang (§7.6) vollständig
+angewandt. §7.5 (Zeitkasten mit eigenem, begrenztem Lebenslauf) und §7.7
+(Entscheidungsdokument) tragen ihre Einschränkungen aus dem Gegenstand selbst;
+sie sind daran noch nicht einzeln nachgeprüft.
 
 ### 7.2 Angabenarten
 
@@ -2067,7 +2125,7 @@ Die Lücke im Eingang ist dagegen auffindbar.
 | Blockadegrund | Fachtext | Pflicht in *blockiert*, sonst unzulässig |
 | Übergehungen | Nebenfolge aus Zeitpunkt, übergangener Bedingung, Grund | nur bei Übergehung nach Regel 12 |
 | Beiträge | Nebenfolge aus externer Kennung, Zeitpunkt, Kurzbeschreibung (Fremdtext) | nur bei Art *Sammelvorgang* und *Pflege* |
-| Beginn / Abschlusszeitpunkt | Zeitpunkt | Abschlusszeitpunkt Pflicht in *abgeschlossen* und *verworfen* |
+| Beginn / Beendigungszeitpunkt | Zeitpunkt | Beendigungszeitpunkt: Pflicht in *abgeschlossen* und *verworfen*, sonst unzulässig (Regel 18) |
 
 #### Zustände und Übergänge
 
@@ -2080,23 +2138,97 @@ Die Lücke im Eingang ist dagegen auffindbar.
 | *in Arbeit* | wird bearbeitet |
 | *blockiert* | kann derzeit nicht weitergeführt werden |
 | *in Prüfung* | Arbeit beendet, Kriterien werden geprüft |
-| *abgeschlossen* | alle Kriterien tragen *erfüllt* |
-| *verworfen* | wird nicht ausgeführt |
+| *abgeschlossen* | alle Kriterien tragen *erfüllt*; der Abschluss ist festgestellt |
+| *verworfen* | ohne festgestellten Abschluss beendet – ein Urteil, das zurückgenommen werden kann |
+
+Die Zustände bilden drei Bereiche. Innerhalb eines Bereichs gilt die
+Grundhaltung aus §7.1.2: Es wird nur verboten, was fachlich nicht wahr sein
+kann.
+
+```text
+Beurteilung   Eingang, in Klärung
+Arbeit        bereit, eingeplant, in Arbeit, blockiert, in Prüfung
+Ausgang       abgeschlossen, verworfen
+```
 
 ```text
 Eingang     → in Klärung | bereit | verworfen
-in Klärung  → bereit | verworfen | Eingang
-bereit      → eingeplant | in Arbeit | verworfen
-eingeplant  → in Arbeit | bereit | verworfen
-in Arbeit   → blockiert | in Prüfung | verworfen
-blockiert   → in Arbeit | verworfen
-in Prüfung  → abgeschlossen | in Arbeit
+in Klärung  → Eingang | bereit | verworfen
+bereit      → in Klärung | eingeplant | in Arbeit | blockiert | verworfen
+eingeplant  → in Klärung | bereit | in Arbeit | blockiert | verworfen
+in Arbeit   → in Klärung | bereit | eingeplant | blockiert | in Prüfung |
+              verworfen
+blockiert   → in Klärung | bereit | eingeplant | in Arbeit | in Prüfung |
+              verworfen
+in Prüfung  → in Klärung | bereit | eingeplant | in Arbeit | blockiert |
+              abgeschlossen | verworfen
+verworfen   → in Klärung
+abgeschlossen →
+```
+
+**Die sechs Regeln, aus denen diese Tabelle folgt:**
+
+1. Zwischen *Eingang* und *in Klärung* gilt beides: Eine begonnene Sichtung
+   darf abgebrochen werden, bevor ein belastbares Urteil entstanden ist.
+2. Der Eintritt in den Arbeitsbereich führt immer über *bereit*. *bereit* ist
+   die Aussage „beurteilt“ und zugleich die Schwelle der Pflichtangaben; ein
+   unbeurteilter Vorgang kann weder eingeplant noch bearbeitet noch geprüft
+   sein. *in Klärung* darf dabei übersprungen werden, wenn die Beurteilung
+   schon im *Eingang* abgeschlossen werden kann; unmittelbar nach *eingeplant*,
+   *in Arbeit*, *blockiert* oder *in Prüfung* gelangt ein Vorgang aus der
+   Beurteilung nicht.
+3. Innerhalb der Arbeit ist jeder Übergang erlaubt – mit einer Ausnahme: *in
+   Prüfung* ist nur aus *in Arbeit* oder *blockiert* erreichbar. Geprüft wird
+   geleistete Arbeit; ohne sie gibt es nichts zu prüfen.
+
+   ```text
+   blockiert → in Prüfung, ausdrücklich gewollt:
+     Arbeit ist fertig, die Prüfung kann nicht beginnen
+       → blockiert, Grund: Testumgebung nicht verfügbar
+     Umgebung wieder da
+       → in Prüfung
+   *Blockiert* heißt „kann derzeit nicht weitergeführt werden“ –
+   das gilt auch für die Prüfung, nicht nur für die Bearbeitung.
+   ```
+4. Aus der Arbeit führt der Rückweg nach *in Klärung*, nicht nach *Eingang*.
+   Neue Erkenntnis macht einen Vorgang wieder klärungsbedürftig, nicht wieder
+   unbeurteilt.
+5. Nach *abgeschlossen* führt nur *in Prüfung*. Der Abschluss folgt der
+   Prüfung, nicht der Arbeit.
+6. *verworfen* ist aus jedem Zustand der Beurteilung und der Arbeit
+   erreichbar. Für den Ausgang gelten die eigenen Regeln des nächsten
+   Abschnitts.
+
+**Die beiden Ausgangszustände sind verschieden endgültig** (§7.1.2, Regel 3).
+Der Unterschied liegt nicht darin, ob Arbeit geleistet wurde – ein Vorgang darf
+auch aus *in Arbeit* und *in Prüfung* verworfen werden –, sondern darin, ob ein
+Abschluss **festgestellt** wurde:
+
+```text
+abgeschlossen   der Abschluss wurde festgestellt
+                → historisches Ergebnis, kein Rückweg
+verworfen       ohne festgestellten Abschluss beendet
+                → das Urteil kann zurückgenommen werden,
+                  Rückweg nach in Klärung
 ```
 
 `abgeschlossen` hat keinen Rückweg; eine später erkannte Lücke ist ein neuer
-Vorgang mit Verweis auf den alten.
+Vorgang mit Verweis auf den alten. Wird dagegen dieselbe verworfene Arbeit
+wieder gebraucht, ist es dieselbe Sache und nicht eine neue (Regel 19).
 
-**Warum *in Klärung* ein eigener Zustand ist** *(offen – Archiv-PM, §12.4)*
+```text
+#abcd  „CSV-Ausgabe ergänzen“
+08-01  Eingang
+08-03  bereit
+08-05  verworfen     Grund: Bedarf entfallen
+09-12  in Klärung    Grund: neuer Kundenbedarf
+09-13  bereit
+```
+
+Der Verlauf verliert dabei nichts: Er zeigt anschließend sogar, dass dieselbe
+Arbeit einmal bewusst verworfen und später wieder aufgenommen wurde (P-010).
+
+**Warum *in Klärung* ein eigener Zustand ist** *(offen – Archiv-PM, §12.3)*
 
 ```text
 Ohne den Zustand:
@@ -2113,7 +2245,8 @@ werden.
 
 1. **Abschluss.** Der Wechsel nach *abgeschlossen* verlangt: jedes
    Abschlusskriterium trägt den Stand *erfüllt*, kein Kindvorgang steht offen,
-   und der Abschlusszeitpunkt ist gesetzt. Für *Sammelvorgang* gilt §7.6.1.
+   und der Beendigungszeitpunkt ist gesetzt (Regel 18). Für *Sammelvorgang*
+   gilt §7.6.1.
 
    ```text
    #9e2b  Abschlusskriterien
@@ -2275,6 +2408,85 @@ werden.
     hineinziehen (dann stimmt das Abschlusskriterium nicht mehr) oder ihn gar
     nicht festhalten. *Kosten:* Der Eingang füllt sich; sichtbar über das
     Eingangsalter (§7.5, Regel 10).
+18. **Beendigungszeitpunkt.**
+
+    ```text
+    Wechsel nach abgeschlossen oder verworfen
+      → auf den Zeitpunkt des Übergangs setzen
+    Verlassen von verworfen
+      → entfernen
+    außerhalb von abgeschlossen und verworfen
+      → unzulässig
+    ```
+
+    Das Feld nennt die **gegenwärtig wirksame** Beendigung, nicht jede frühere.
+    Eine frühere Beendigung bleibt im Zustandsverlauf nachvollziehbar (P-010);
+    das Entfernen am Vorgang löscht sie nicht.
+
+    ```text
+    08-05  bereit     → verworfen        Beendigung = 08-05
+    09-12  verworfen  → in Klärung       Beendigung = leer
+    09-20  in Prüfung → abgeschlossen    Beendigung = 09-20
+
+    Der 08-05 ist weiterhin im Verlauf zu lesen, aber nicht mehr
+    der Beendigungszeitpunkt des Vorgangs.
+    ```
+19. **Wiederaufnahme aus *verworfen*.** Der Rückweg nach *in Klärung* gilt
+    derselben Sache: Er ist zulässig, wenn dieselbe fachliche Arbeit wieder
+    gebraucht wird. Ist die Arbeit neu oder wesentlich verändert, wird ein
+    neuer Vorgang angelegt und, wo es hilft, mit `references` auf den
+    verworfenen verwiesen.
+
+    ```text
+    #abcd „CSV-Ausgabe ergänzen“ verworfen: Bedarf entfallen
+      neuer Kunde braucht genau diese Ausgabe
+        → dieselbe Arbeit          → #abcd wieder aufnehmen
+      CSV soll künftig auch XLSX können
+        → wesentlich verändert     → neuer Vorgang, references → #abcd
+    ```
+
+    Diese Unterscheidung trifft der Handelnde; sie ist keine aus den Daten
+    ableitbare Bedingung. Geprüft wird der zulässige Rückweg, nicht das Urteil
+    über die Gleichheit der Sache.
+
+20. **Kein offener Kindvorgang unter einem beendeten Elternvorgang.** Regel 1
+    stellt diese Lage beim Abschluss her; die Wiederaufnahme darf sie nicht
+    wieder zerstören.
+
+    ```text
+    Elternvorgang abgeschlossen
+      → das Kind bleibt beendet. Der Elternzustand hat keinen Rückweg,
+        die Lage wäre nicht mehr auflösbar.
+    Elternvorgang verworfen
+      → das Kind wird nicht allein wieder aufgenommen. Spätestens zugleich
+        mit ihm kehrt der Elternvorgang nach in Klärung zurück.
+    Elternvorgang offen
+      → gewöhnliche Wiederaufnahme des Kindes.
+    ```
+
+    Eltern- und Kindvorgang dürfen gemeinsam oder nacheinander wiederkehren.
+    Nach **jeder einzelnen abgeschlossenen Änderung** muss aber gelten: Ein
+    beendeter Elternvorgang hat kein offenes Kind. Bei getrennter
+    Wiederaufnahme wechselt deshalb zuerst der Elternvorgang nach *in Klärung*
+    und erst danach das Kind.
+
+    ```text
+    Ausgang      Epos E  verworfen
+                 └─ T    verworfen
+
+    zulässig     E → in Klärung        E  in Klärung
+                                       └─ T verworfen
+                 danach T → in Klärung E  in Klärung
+                                       └─ T in Klärung
+
+    unzulässig   T → in Klärung        E  verworfen
+                                       └─ T in Klärung
+    ```
+21. **Die Pflichtschwelle bleibt nach der Wiederaufnahme erreicht** (§7.1.1,
+    Regel 6): Ein Vorgang, der *bereit* war, kehrt mit seinen Pflichtangaben
+    zurück; ein
+    unmittelbar aus dem *Eingang* verworfener hat die Schwelle nie erreicht und
+    kehrt ohne sie zurück.
 
 #### Verantwortung
 
@@ -2303,7 +2515,7 @@ Kriterium: „erledigt“ ist eine Aussage über Arbeit, „erfüllt“ über ei
 
 #### 7.6.1 Sammelvorgang und Nebenbei-Beiträge
 
-**Ohne diese Regel** *(offen – Archiv-PM, §12.4)*
+**Ohne diese Regel** *(offen – Archiv-PM, §12.3)*
 
 ```text
 Jede Nebenbei-Änderung wird ein eigener Vorgang:
@@ -3308,10 +3520,14 @@ P-010                Zustand und Zeitpunkte werden geändert und der
 ausschließlich über `pm.transition_issue()`, für die `editor` das
 Ausführungsrecht besitzt. Auch `finished_at` darf `editor` nicht unmittelbar
 ändern; der Zeitpunkt wird ausschließlich durch die Übergangsfunktion bei einem
-Wechsel in einen endgültigen Zustand gesetzt.
+Wechsel nach *abgeschlossen* oder *verworfen* gesetzt.
 
 Der Blockadegrund bleibt dagegen unmittelbar änderbar: Er kann sich während
 derselben Blockade sachlich ändern, ohne dass ein Zustandswechsel stattfindet.
+
+**Die Übergangstabelle im Arbeitsbaum entspricht noch der früheren, weitgehend
+linearen Fassung**; §7.1.2 und die neu gefassten Übergänge aus §7.6 sind am
+Stichtag noch nicht umgesetzt.
 
 **Noch nicht geprüft wird Regel 11 (Vorhaben-Schranke).** Sie setzt den Sprint
 voraus, der nicht Teil des ersten Go-live ist.
@@ -3371,7 +3587,7 @@ weitere Fachart, sondern der erste Gegenstand, der den ganzen Weg geht:
 5. einen Kindvorgang anlegen; der Abschluss des Elternvorgangs wird zunächst
    abgewiesen; danach den Kindvorgang durch seinen zulässigen Lebenslauf
    führen und abschließen, die Abschlusskriterien des Elternvorgangs erfüllen
-   und den Elternvorgang abschließen; der Abschlusszeitpunkt wird gesetzt
+   und den Elternvorgang abschließen; der Beendigungszeitpunkt wird gesetzt
    (Regel 1);
 6. prüfen, dass abgewiesene Übergänge weder Zustand noch Verlauf verändern,
    und den Zustandsverlauf der erfolgreichen Wechsel lesen (P-010);
@@ -3395,7 +3611,7 @@ schon prüft.
 **Die übrigen Facharten folgen bei konkretem Bedarf.** Sprint, KEP-Lite, ADR
 und Richtlinie stehen in §6.1 auf *geplant*; keine von ihnen ist Voraussetzung
 dieses Meilensteins. Eine Fachart wird umgesetzt, sobald ein wirklicher
-Projektablauf sie benötigt (§12.5). Dasselbe gilt für die Vorhaben-Schranke
+Projektablauf sie benötigt (§12.4). Dasselbe gilt für die Vorhaben-Schranke
 (§7.6, Regel 11): Die Entscheidung bleibt fachlich gültig; ihre technische
 Umsetzung erfolgt zusammen mit der benötigten Sprint-Unterstützung.
 
@@ -3406,7 +3622,7 @@ eines Ablaufs (§2).
 
 ---
 
-## 12. Ablösung, offene Punkte und Änderungen
+## 12. Ablösung und offene Punkte
 
 ### 12.1 Ablösung
 
@@ -3427,9 +3643,11 @@ der Umsetzungsschicht und richten sich nach §7.
 2. **Wortlautprüfung.** Alle Paraphrasen in *Was sie sagt* sind an den
    Originaltexten der Klassen A, B und C zu prüfen. Geprüft am 27. Juli 2026:
    NASA WBS Handbook, DACS Statement of Principles, SAA Dictionary,
-   Gotel/Finkelstein 1994. Alles Übrige bleibt **(ungeprüft)**.
+   Gotel/Finkelstein 1994. Geprüft am 2. August 2026: Open Guide to Kanban
+   v2025.7, Atlassian-Jira- und OpenProject-Workflow-Dokumentation – bei
+   OpenProject zusätzlich die Umsetzung. Alles Übrige bleibt **(ungeprüft)**.
 3. **Bruchfall-Prüfung.** Die mit `(offen)` markierten Bruchfälle sind zu
-   belegen; die Anfragen stehen in §12.4.
+   belegen; die Anfragen stehen in §12.3.
 4. **Allgemeine Abschlussrichtlinie.** §7.6 verweist auf eine projektweit
    geltende Abschlussdefinition; ihr Inhalt ist nicht entschieden.
 5. **Erfassungsgrenze der Sprintauswertung.** Ob Zuarbeit, Unterbrechungen und
@@ -3472,50 +3690,9 @@ der Umsetzungsschicht und richten sich nach §7.
 10. **Zwei Regeln der Grundlage ruhen auf einer Quelle.** Ablauf A1 und Ablauf D
     ruhen auf dem Scrum Guide, der sich selbst als unvollständig bezeichnet und
     beispielfrei ist. Für sie gibt es keinen Ersatz in der Literatur; ihre
-    Belege müssen aus der Erfahrung kommen (§12.4, Zeilen zu Ablauf A1 und Ablauf D).
+    Belege müssen aus der Erfahrung kommen (§12.3, Zeilen zu Ablauf A1 und Ablauf D).
 
-### 12.3 Was sich fachlich geändert hat
-
-#### Fassung 7
-
-| Änderung | Wo | Grund |
-|---|---|---|
-| **Projekt und Bereich sind Rahmen**, keine Facharten | §0.4, §6, §7.3, §7.4, §8.2 | Sie tragen keine Kennung im Objektgraphen und sind kein Endpunkt einer Kante; „sechzehn Facharten“ war falsch |
-| **P-014: drei Auflösungsstufen** statt zwei | P-014, §7.2, §7.3 | Der Ist-Umfang wird aus dem Zustandsverlauf berechnet – in einem undurchsichtigen Feld unmöglich |
-| Schema gehört zur **Fachart**, nicht zum Gegenstand; JSON Schema, Text in §7 | P-014 | sonst wäre dieselbe Vorlage zweimal beschrieben |
-| Auflösungsgrenze ist zugleich **Zuständigkeitsgrenze** | P-014, §12.5 | der Gedanke stand dreimal als Verlust und nie als Grenze |
-| `documents` und `verifies` **entfallen**; vier Beziehungsarten | §8.1, §8.2, §9.5, §9.6 | `documents` hatte nach dem Wegfall der Arbeitsdokumentation keine Quellart; `verifies` verwies auf eine verworfene Vorlage |
-| Zyklenprüfung **je Beziehungsart**, Ordnungsklassen entfallen | §8.1 | der gemischte Ring ist konstruiert; die Klassen kosteten mehr, als sie halten |
-| **§7.6, Regel 15 Beleggrenze** und **Regel 16 Größenbremse** | §7.6 | „woran war es fertig?“ wird nicht durch einen feineren Gegenstand beantwortet, sondern durch einen kleineren Vorgang |
-| Regel 16 fragt **zuerst warum** – KEP-Lite, Spezifikation, Testmatrix, Runbook | §7.6 | ohne Auslöser bleibt das Vorlagensystem eine Möglichkeit, die niemand nutzt |
-| **Regel 17 Nebenbefund**; Regel 10 wird dreiteilig | §7.6 | der Fund außerhalb des Vorgangsumfangs hatte keinen Weg |
-| **§7.4, Regel 6 und 7**: Löschbremse und Löschschutz | §7.4 | geprüftes Verhalten ohne Stelle in der Spezifikation |
-| P-004: Träger der Prüfung ist der **Verlaufseintrag** | P-004, P-010 | nach dem Wegfall des Prüfnachweises hatte die Funktion keinen Träger |
-| P-010: Pflichtliste mit Schwelle **angenommen/gültig gegen Entwurf** | P-010 | „jede Änderung“ wäre Rauschen, „nur Zustandswechsel“ zu wenig |
-| Pflichtsprachen gelten **installationsweit** | P-005, §7.4 | zwei Geltungsbereiche für dieselbe Regel |
-| Sammelvorgang zählt nur mit Beitrag zum Ist-Umfang | §7.5, §7.6.1 | er stand sonst in jedem Sprint |
-| **Drift-Bericht und Feature-Matrix aufgenommen**, beide mit ausstehendem Beleg | §6.1, §7.12, §7.13 | die Vorlagen sind entschieden; die Prüffrage nach P-012 liegt bei der archivierten PM (§12.4) |
-| Prüfnachweis und Arbeitsdokumentation nach **Anhang C** | §6.2, Anhang C | §7 enthält nur, was gebaut wird |
-| **Regelschlüssel entfallen**; Kennzeichen bleibt die Nummer | Anhang A.6 | ein Schlüsselregister wäre die Doppelpflege aus §3.2 |
-| §10 auf **Arbeitsstand** zurückgestuft; §10.3 um fünf Lücken ergänzt | §10 | *aktuell* verlangt einen benannten Ablauf, nicht eine Tabelle |
-| **Drei Erwartungswerte** statt dreier offener Punkte | §7.6.1, §7.10, Ablauf E | eine Regel ohne Zahl greift nicht |
-| §0 auf zwei Seiten; **drei Abläufe**; Marktprüfung nach Anhang D | §0, Anhang D | wer nur eine Seite liest, muss die Spezifikation benutzen können |
-| Definitionen in **Fallform** | §2, §7.2, §7.4, §7.5 | „wovon genau ist hier die Rede?“ (Anhang A.1) |
-
-#### Fassung 6
-
-P-014 Auflösungsgrenze eingeführt; `verifies`, `parent_of` und `supersedes` von
-Beziehungsarten zu Angaben; §8.2 zweistufig mit Kardinalität; System-Spezifikation
-angenommen; P-006 um Eindeutigkeit externer Einheiten und das Verbot stiller
-Normalisierung erweitert; P-005 um zwei Sprachstufen; P-010 um die Änderungsart.
-
-#### Fassung 5
-
-`depends_on` eingeführt und projektübergreifend erlaubt; Sprint trägt eine
-Projektmenge; Vorhaben als wirkende Größe; Vorhaben- und Abhängigkeitsschranke;
-Bruchfall vor der Regel; Herkunftsmarken; §0 Vorhang neu.
-
-### 12.4 Anfragen an die archivierte PM
+### 12.3 Anfragen an die archivierte PM
 
 **Reihenfolge:** zuerst die Quelle, dann diese Liste. Die Liste enthält nur
 Regeln, deren Quelle nichts hergibt.
@@ -3542,7 +3719,7 @@ Handbook), P-006 (DACS), Anhang C.1 (Gotel/Finkelstein).
 **Dringend: Ablauf A1 und Ablauf D** – für sie gibt es keine Literatur.
 **Für eine Aufnahme nötig: §7.13 und §7.12.**
 
-### 12.5 Umfang der ersten Fassung
+### 12.4 Umfang der ersten Fassung
 
 **Was zurückgestellt ist, ist entschieden – nicht vergessen.**
 
@@ -3676,6 +3853,23 @@ mit    find(area = i18n, zustand = bereit)   →  {#4c19, #7b0d}
 Fall verlangt vom Leser, sich den Fall selbst auszudenken. Betroffen und
 umgestellt sind §2, §7.2, §7.4 und §7.5.
 
+**Abstrakte Zusammenfassungen ersetzen den Fall nicht.** Wörter wie *Invariante*,
+*atomar*, *konsistent*, *bleibt gewahrt* oder *darf nicht umgangen werden* sind
+nur zulässig, wenn daneben unmittelbar erkennbar ist, welcher konkrete Fall die
+Regel erfüllt und welcher sie verletzt. Bei einer
+Reihenfolgeregel werden die gültige und die ungültige Reihenfolge gezeigt.
+
+```text
+nicht ausreichend
+  „Die Invariante gilt nach jedem abgeschlossenen Schritt.“
+
+ausreichend
+  Ausgang      E verworfen
+               └─ T verworfen
+  zulässig     erst E → in Klärung, danach T → in Klärung
+  unzulässig   T → in Klärung, während E verworfen ist
+```
+
 **Regel gegen Scheinalternativen:** Eine Option zählt in Punkt 4 nur, wenn sie in
 einer Quelle benannt ist oder wirklich erwogen wurde – **und wenn sich für sie
 ein kleinster Fall und eine Bruchstelle angeben lassen.** Schwache Optionen zu
@@ -3722,7 +3916,7 @@ Register; die Stelle steht ohnehin daneben (A.6).
 | `belegt: …` | Die Quelle beschreibt den Schaden selbst |
 | `erlebt: …` | In einem wirklichen Ablauf vorgekommen |
 | `konstruiert` | Ausgedacht, plausibel, nicht vorgekommen |
-| `offen – Archiv-PM` | Benannte Frage an jemanden mit Zugang (§12.4) |
+| `offen – Archiv-PM` | Benannte Frage an jemanden mit Zugang (§12.3) |
 
 **Mock-Daten sind Darstellung, keine Herkunft.** Die Marke sagt, woher der
 *Mechanismus* stammt; die Kleidung ist davon unabhängig.
@@ -3761,9 +3955,13 @@ Ergebnis und führt zur unbelegten Festlegung.
 ### A.5 Wortlautvorbehalt
 
 Die Abschnitte *Was sie sagt* sind **Paraphrasen**, keine Zitate. Wörtliche
-Zitate stehen in Anführungszeichen und stammen aus Klasse A oder B. Wo eine
-Paraphrase noch nicht geprüft ist, steht **(ungeprüft)** – der Stand ist in
-§12.2, Punkt 2 geführt.
+Zitate stehen in Anführungszeichen und stammen aus einem zugänglichen
+Originaltext der Klassen A, B oder C. Wo eine Paraphrase noch nicht geprüft
+ist, steht **(ungeprüft)** – der Stand ist in §12.2, Punkt 2 geführt.
+
+*Zu Klasse C:* Herstellerdokumentation ist zitierfähig, wenn ihr Wortlaut
+zugänglich und geprüft ist. Ihre Tragfähigkeit begrenzt bereits die Klasse
+selbst (A.2): Sie zeigt gelebte Praxis, keine Autorität.
 
 ### A.6 Kennzeichen und Belegort
 
@@ -3807,7 +4005,7 @@ prüfbar         Nummerierung lückenlos und aufsteigend;
 nicht prüfbar   ob hinter der Nummer noch dieselbe Regel steht
                 → Preis, klein, weil Spezifikation und Tests gemeinsam
                   versioniert sind
-Umnummerieren   redaktionelle Änderung mit Eintrag in §12.3
+Umnummerieren   redaktionelle Änderung
 ```
 
 **Belegort.** §10 nennt Abschnittsnummer und Ablauf von Hand. Eine berechnete
@@ -3863,36 +4061,65 @@ Nach Tragfähigkeit gegliedert (A.2).
 7. **DACS, Statement of Principles** – Provenienzprinzip; Abruf nach Herkunft.
    <https://saa-ts-dacs.github.io/dacs/04_statement_of_principles.html>
    *(P-006, Z5; Wortlaut geprüft 2026-07-27)*
+8. **Open Guide to Kanban**, v2025.7 –
+   <https://kanbanguides.org/open-guide-to-kanban/2025.7/>, Anpassung des
+   *Kanban Guide* (Mai 2025) unter CC BY-SA 4.0. Die *Definition of
+   Workflow* verlangt „one or more defined states that the Work Items Flow
+   [through]“ und „a set of Explicit policies about how Work Items can Flow
+   through each state“; sie wird fortlaufend überprüft: „Kanban system members
+   often review the Definition of Workflow to discuss and adopt needed
+   changes“, Änderungen „informed by evidence“. Eine Richtung oder Reihenfolge
+   der Zustände gibt der Leitfaden nicht vor. *(§7.1.2; trägt, dass der
+   Arbeitsfluss definiert und aufgrund empirischer Erkenntnisse
+   weiterentwickelt wird, nicht eine bestimmte Pages-PM-Kante; Wortlaut geprüft
+   2026-08-02)*
 
 ### Klasse B – frei zugängliche Praxisliteratur
 
-8. **NASA Work Breakdown Structure Handbook**, NASA/SP-20210023927 –
+9. **NASA Work Breakdown Structure Handbook**, NASA/SP-20210023927 –
    produktorientierte Zerlegung; Kapitel 3.5 „Common Development Errors“.
    *(P-002, P-003, Ablauf C; Wortlaut geprüft 2026-07-27)*
-9. **Gotel/Finkelstein, „An Analysis of the Requirements Traceability Problem“**
-   (ICRE 1994). *(Anhang C.1)*
-10. **SAA, Dictionary of Archives Terminology**, *provenance*, *respect des
+10. **Gotel/Finkelstein, „An Analysis of the Requirements Traceability
+    Problem“** (ICRE 1994). *(Anhang C.1)*
+11. **SAA, Dictionary of Archives Terminology**, *provenance*, *respect des
     fonds*. *(P-006)*
-11. **Michael Nygard, „Documenting Architecture Decisions“**.
-12. **MADR – Markdown Architectural Decision Records**. <https://adr.github.io/>
-13. **Martin Fowler, „Yagni“**. <https://martinfowler.com/bliki/Yagni.html>
-14. **Martin Fowler, „Event Sourcing“**.
-15. **Martin Fowler, „Opportunistic Refactoring“**. *(§7.6.1, Regel 10)*
-16. **Google SRE Book**, „Postmortem Culture“ und Incident Response.
-17. **arc42 Template Overview**. <https://arc42.org/overview>
-18. **Kubernetes Enhancement Proposals (KEP)**.
-19. **PEP 1** – mit dem Pflichtabschnitt „Rejected Ideas“. *(Ablauf B)*
-20. **Tim Berners-Lee, „Cool URIs don't change“** (W3C).
-21. **Rosenfeld/Morville, *Information Architecture***.
-22. **Kombinatorische Testpraxis** (NIST-Material).
+12. **Michael Nygard, „Documenting Architecture Decisions“**.
+13. **MADR – Markdown Architectural Decision Records**. <https://adr.github.io/>
+14. **Martin Fowler, „Yagni“**. <https://martinfowler.com/bliki/Yagni.html>
+15. **Martin Fowler, „Event Sourcing“**.
+16. **Martin Fowler, „Opportunistic Refactoring“**. *(§7.6.1, Regel 10)*
+17. **Google SRE Book**, „Postmortem Culture“ und Incident Response.
+18. **arc42 Template Overview**. <https://arc42.org/overview>
+19. **Kubernetes Enhancement Proposals (KEP)**.
+20. **PEP 1** – mit dem Pflichtabschnitt „Rejected Ideas“. *(Ablauf B)*
+21. **Tim Berners-Lee, „Cool URIs don't change“** (W3C).
+22. **Rosenfeld/Morville, *Information Architecture***.
+23. **Kombinatorische Testpraxis** (NIST-Material).
 
 ### Klasse C – Werkzeug- und Herstellerdokumentation
 
-23. **Jira-Verknüpfungstypen** – `blocks`, `duplicates`, `causes`, `relates to`.
-24. **GitHub, schließende Schlüsselwörter** – „fixes #123“.
-25. **AWS Systems Manager Automation**.
-26. **Drift-Erkennung in Infrastructure-as-Code-Werkzeugen**.
-27. **Unicode CLDR** und **Mozilla Fluent** – Sprach-Fallback.
+24. **Jira-Verknüpfungstypen** – `blocks`, `duplicates`, `causes`, `relates to`.
+25. **GitHub, schließende Schlüsselwörter** – „fixes #123“.
+26. **AWS Systems Manager Automation**.
+27. **Drift-Erkennung in Infrastructure-as-Code-Werkzeugen**.
+28. **Unicode CLDR** und **Mozilla Fluent** – Sprach-Fallback.
+29. **Atlassian Jira, Workflow-Dokumentation** – Übergänge zwischen Zuständen
+    sind gerichtete, einzeln konfigurierbare Beziehungen: „Transitions are also
+    *one-way*“; „To move a work item back and forth, you need two separate
+    transitions“, angelegt über *From status* und *To status*.
+    <https://support.atlassian.com/jira-cloud-administration/docs/create-workflow-transitions/>
+    *(§7.1.2; zeigt, dass Rück- und Seitenwege ausdrückbar sind; begründet keine
+    bestimmte Pages-PM-Kante; Wortlaut geprüft 2026-08-02)*
+30. **OpenProject, Workflow-Dokumentation und Implementierung** – ein Workflow
+    ist „the allowed transitions between work package status for a role and a
+    type“; die Matrix ist gerichtet (Ausgangsstatus in den Zeilen, Zielstatus
+    in den Spalten).
+    <https://www.openproject.org/docs/system-admin-guide/manage-work-packages/work-package-workflows/>;
+    Umsetzung: <https://github.com/opf/openproject>, `app/models/workflow.rb`
+    mit `old_status`, `new_status`, `type` und `role`, Stand `079baeb`.
+    *(§7.1.2; zeigt gerichtete Rück- und Seitenwege; die technische Matrix ist
+    keine fachliche Soll-Matrix für Pages PM; Wortlaut geprüft 2026-08-02,
+    Implementierung eingesehen)*
 
 ### Noch nicht eingeordnet
 
