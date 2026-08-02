@@ -25,15 +25,12 @@ Richtlinie #4d1a gilt für seinen Abschluss
 depends_on #4c19 wird vor „in Arbeit“ geprüft
 ```
 
-> **Stand:** Die gemeinsame PostgreSQL-Grundlage, die Vorgangstabelle mit ihren
-> Integritätsregeln und der bisherige kontrollierte Zustandswechsel sind
-> umgesetzt und getestet. Betriebsbereit ist der Vorgang damit noch nicht: Die
-> Spezifikation hat die Vorgangsübergänge inzwischen neu gefasst, und die
-> gemeinsame Lesesicht fehlt. Als Nächstes folgen Migration 015 und die
-> Angleichung der Übergangs- und Lebenslauftests, danach `pm.objects`. Der Weg
-> zum ersten Go-live steht [weiter unten](#8-weg-zum-ersten-go-live). Die
-> folgenden Beispiele zeigen das vorgesehene Zusammenspiel, nicht den
-> Ist-Zustand.
+> **Stand:** Die PostgreSQL-Grundlage und der erste Vorgangsweg sind umgesetzt
+> und getestet. Die Spezifikation ist bei den Vorgangsübergängen bereits weiter
+> als der Arbeitsbaum; vor `pm.objects` werden diese Änderungen noch umgesetzt
+> und getestet. Der Weg zum ersten Go-live steht
+> [weiter unten](#8-weg-zum-ersten-go-live). Die folgenden Beispiele zeigen das
+> vorgesehene Zusammenspiel, nicht den Ist-Zustand.
 
 ## 1. Was ich gesucht habe – und was Pages PM daraus macht
 
@@ -208,10 +205,9 @@ Umgesetzt und getestet sind derzeit:
   mindestens einem Kind sowie Abschlusssperre bei offenen Kindvorgängen oder
   unerfüllten Abschlusskriterien), atomar verbunden mit dem Zustandsverlauf.
 
-Noch nicht umgesetzt: die inzwischen neu gefasste Übergangsordnung aus §7.1.2
-und §7.6 der Spezifikation, die gemeinsame `pm.objects`-Lesesicht, die
-Fachtabellen für die weiteren geplanten Facharten sowie der Python-Renderer für
-GitHub Pages. Eine
+Noch nicht umgesetzt: die aktuellen Vorgangsübergänge der Spezifikation,
+die gemeinsame `pm.objects`-Lesesicht, die Fachtabellen für die weiteren
+geplanten Facharten sowie der Python-Renderer für GitHub Pages. Eine
 verantwortliche Identität führt der Vorgang für den ersten Go-live bewusst
 noch nicht (§10.2 der Spezifikation). Sprint gehört bewusst nicht zum ersten
 Go-live (§12.4) — es wird erst umgesetzt, sobald ein konkreter Projektablauf
@@ -351,24 +347,22 @@ Abschlusssperre bei offenen Kindvorgängen oder unerfüllten
 Abschlusskriterien sowie Verlaufseintrag in derselben Transaktion) sind
 umgesetzt. Es folgen, in dieser Reihenfolge:
 
-1. Migration 015 umsetzen und die Vorgangsübergänge an die neu gefasste
-   Übergangsordnung aus §7.1.2 und §7.6 der Spezifikation angleichen.
-2. Übergangs- und Lebenslauftests an die neue Matrix angleichen.
-3. `pm.objects` als gemeinsame Lesesicht (P-011) ergänzen — sie entsteht
+1. Die Vorgangsübergänge an die aktuelle Spezifikation angleichen und testen.
+2. `pm.objects` als gemeinsame Lesesicht (P-011) ergänzen — sie entsteht
    bewusst erst nach der Vorgangstabelle, weil sie vorher kaum Inhalt hätte.
-4. Den SQL-Einstiegswrapper (`scripts/write-sql.sh`) bereitstellen:
+3. Den SQL-Einstiegswrapper (`scripts/write-sql.sh`) bereitstellen:
    Verbindung als `editor`, `ON_ERROR_STOP`, transaktionale Ausführung eines
    SQL-Skripts — der erste echte Vorgang soll nicht mehr per Hand in `psql`
    entstehen.
-5. Den ersten echten Pages-PM-Vorgang anlegen und die für den
+4. Den ersten echten Pages-PM-Vorgang anlegen und die für den
    End-to-End-Nachweis benötigten weiteren Vorgänge erfassen.
-6. Einen vollständigen End-to-End-Ablauf durchführen (§11 der Spezifikation);
+5. Einen vollständigen End-to-End-Ablauf durchführen (§11 der Spezifikation);
    ausgewählte geprüfte Ausschnitte ersetzen später die vorläufigen Beispiele
    in dieser README.
-7. Die weitere Entwicklung von Pages PM im System selbst verwalten: die
+6. Die weitere Entwicklung von Pages PM im System selbst verwalten: die
    nächsten Schema- und Fachumsetzungen als wirkliche Vorgänge erfassen sowie
    benötigte historische Inhalte bedarfsgesteuert übernehmen.
-8. Weitere Facharten ergänzen, sobald ein konkreter Projektablauf sie
+7. Weitere Facharten ergänzen, sobald ein konkreter Projektablauf sie
    benötigt — kein Vorratsbau aller angenommenen Facharten.
 
 Nach dem ersten Go-live gehören zum festgelegten weiteren Ausbau: die

@@ -24,13 +24,10 @@ Policy #4d1a governs its completion
 depends_on #4c19 is checked before "in progress"
 ```
 
-> **Status:** The shared PostgreSQL foundation, the issue table with its
-> integrity rules, and the existing controlled state-transition mechanism are
-> implemented and tested. That does not make the issue operational yet: the
-> specification has since recast the issue transitions, and the shared read
-> view is missing. Next up are migration 015 and the alignment of the
-> transition and lifecycle tests, then `pm.objects`. The path to the first
-> go-live is
+> **Status:** The PostgreSQL foundation and the first issue path are
+> implemented and tested. On issue transitions the specification is already
+> ahead of the working tree; those changes will be implemented and tested
+> before `pm.objects`. The path to the first go-live is
 > [further below](#8-path-to-the-first-go-live). The examples below show
 > the intended interplay, not the current state.
 
@@ -205,9 +202,9 @@ Implemented and tested today:
   issues or unfulfilled completion criteria), atomically linked with the
   state history.
 
-Not yet implemented: the recast issue-transition order from §7.1.2 and §7.6 of
-the specification, the shared `pm.objects` read view, the domain tables for the
-remaining planned domain types, and the Python renderer for GitHub Pages. For
+Not yet implemented: the specification's current issue transitions, the
+shared `pm.objects` read view, the domain tables for the remaining planned
+domain types, and the Python renderer for GitHub Pages. For
 the first go-live an issue deliberately carries no responsible identity yet
 (§10.2 of the specification). Sprint is deliberately excluded from the first
 go-live (§12.4) — it will be implemented once a concrete project workflow
@@ -343,24 +340,22 @@ barrier for open child issues or unfulfilled completion criteria, and the
 history entry written in the same transaction) are implemented. What follows,
 in this order:
 
-1. Implement migration 015 and align the issue transitions with the recast
-   transition order in §7.1.2 and §7.6 of the specification.
-2. Align the transition and lifecycle tests with the new matrix.
-3. Add `pm.objects` as the shared read view (P-011) — deliberately built
+1. Align the issue transitions with the current specification and test them.
+2. Add `pm.objects` as the shared read view (P-011) — deliberately built
    only after the issue table, since it would have little content before
    that.
-4. Provide the SQL entry-point wrapper (`scripts/write-sql.sh`): connects as
+3. Provide the SQL entry-point wrapper (`scripts/write-sql.sh`): connects as
    `editor`, `ON_ERROR_STOP`, transactional execution of a SQL script — the
    first real issue should no longer be created by hand in `psql`.
-5. Create the first real Pages PM issue and record the further issues needed
+4. Create the first real Pages PM issue and record the further issues needed
    for end-to-end verification.
-6. Carry out a full end-to-end walkthrough (§11 of the specification);
+5. Carry out a full end-to-end walkthrough (§11 of the specification);
    selected, verified excerpts later replace the placeholder examples in this
    README.
-7. Manage Pages PM's own further development within the system itself:
+6. Manage Pages PM's own further development within the system itself:
    track the next schema and domain work as real issues, and migrate needed
    historical content on demand.
-8. Add further domain types once a concrete project workflow needs them — no
+7. Add further domain types once a concrete project workflow needs them — no
    stockpiling of every accepted domain type.
 
 After the first go-live, the defined further expansion comprises:
