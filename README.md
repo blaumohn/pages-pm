@@ -1,8 +1,34 @@
+
+
 <p align="right">Deutsch | <a href="README.en.md">English</a></p>
 
 ---
 
 # Pages PM
+<!-- mdman:toc:start -->
+
+- [Einleitung](#einleitung)
+- [1. Was ich gesucht habe – und was Pages PM daraus macht](#1-was-ich-gesucht-habe--und-was-pages-pm-daraus-macht)
+  - [Projektarbeit liegt in getrennten Systemen](#projektarbeit-liegt-in-getrennten-systemen)
+  - [Kleine Werkzeuge sind zu schwach, große zu aufwendig](#kleine-werkzeuge-sind-zu-schwach-große-zu-aufwendig)
+  - [Laufende Nummern behaupten eine Ordnung, die nicht existiert](#laufende-nummern-behaupten-eine-ordnung-die-nicht-existiert)
+  - [Ein vollständiger Altimport verzögert den Start](#ein-vollständiger-altimport-verzögert-den-start)
+  - [Menschen, Skripte und Agenten dürfen keine verschiedenen Regeln haben](#menschen-skripte-und-agenten-dürfen-keine-verschiedenen-regeln-haben)
+  - [Historische Inhalte sollen nicht nur lesbar, sondern veränderbar werden](#historische-inhalte-sollen-nicht-nur-lesbar-sondern-veränderbar-werden)
+- [2. Was Pages PM bewusst nicht ist](#2-was-pages-pm-bewusst-nicht-ist)
+- [3. Warum nicht einfach Jira, Confluence oder Plane?](#3-warum-nicht-einfach-jira-confluence-oder-plane)
+- [4. Gegenwärtiger Stand im Einzelnen](#4-gegenwärtiger-stand-im-einzelnen)
+- [5. In fünf Minuten starten](#5-in-fünf-minuten-starten)
+- [6. Technisches Modell](#6-technisches-modell)
+- [7. Repository-Aufbau](#7-repositoryaufbau)
+- [8. Weg zum ersten Go-live](#8-weg-zum-ersten-golive)
+- [Lizenz](#lizenz)
+
+---
+<!-- mdman:toc:end -->
+
+
+## Einleitung
 
 **Pages PM ist eine kleine, selbst betreibbare Projektverwaltung, in der
 Vorgänge, Entscheidungen und geltende Dokumente als ein gemeinsamer, von

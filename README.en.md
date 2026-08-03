@@ -1,8 +1,34 @@
+
 <p align="right"><a href="README.md">Deutsch</a> | English</p>
 
 ---
 
 # Pages PM
+<!-- mdman:toc:start -->
+
+- [Introduction](#introduction)
+- [1. What I was looking for — and what Pages PM makes of it](#1-what-i-was-looking-for--and-what-pages-pm-makes-of-it)
+  - [Project work lives in separate systems](#project-work-lives-in-separate-systems)
+  - [Small tools are too weak, large ones too heavy](#small-tools-are-too-weak-large-ones-too-heavy)
+  - [Sequential numbers claim an order that doesn't exist](#sequential-numbers-claim-an-order-that-doesnt-exist)
+  - [A full legacy import delays the start](#a-full-legacy-import-delays-the-start)
+  - [People, scripts, and agents must not follow different rules](#people-scripts-and-agents-must-not-follow-different-rules)
+  - [Historical content should be usable, not just searchable](#historical-content-should-be-usable-not-just-searchable)
+- [2. What Pages PM deliberately is not](#2-what-pages-pm-deliberately-is-not)
+- [3. Why not just Jira, Confluence, or Plane?](#3-why-not-just-jira-confluence-or-plane)
+- [4. Current state in detail](#4-current-state-in-detail)
+- [5. Get started in five minutes](#5-get-started-in-five-minutes)
+- [6. Technical model](#6-technical-model)
+- [7. Repository structure](#7-repository-structure)
+- [8. Path to the first go-live](#8-path-to-the-first-golive)
+- [License](#license)
+
+---
+<!-- mdman:toc:end -->
+
+
+
+## Introduction
 
 **Pages PM is a small, self-hosted project management system in which
 issues, decisions, and governing documents live in one shared,
