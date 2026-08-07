@@ -2244,9 +2244,9 @@ werden.
 #### Fachliche Prüfregeln
 
 1. **Abschluss.** Der Wechsel nach *abgeschlossen* verlangt: jedes
-   Abschlusskriterium trägt den Stand *erfüllt*, kein Kindvorgang steht offen,
-   und der Beendigungszeitpunkt ist gesetzt (Regel 18). Für *Sammelvorgang*
-   gilt §7.6.1.
+   Abschlusskriterium trägt den Stand *erfüllt* und der Beendigungszeitpunkt
+   ist gesetzt (Regel 18). Dass kein Kindvorgang offen steht, verlangt Regel 20
+   für beide Ausgänge. Für *Sammelvorgang* gilt §7.6.1.
 
    ```text
    #9e2b  Abschlusskriterien
@@ -2449,38 +2449,63 @@ werden.
     ableitbare Bedingung. Geprüft wird der zulässige Rückweg, nicht das Urteil
     über die Gleichheit der Sache.
 
-20. **Kein offener Kindvorgang unter einem beendeten Elternvorgang.** Regel 1
-    stellt diese Lage beim Abschluss her; die Wiederaufnahme darf sie nicht
-    wieder zerstören.
+20. **Ein beendeter Elternvorgang hat kein offenes Kind.** Die Regel gilt nach
+    jeder einzelnen abgeschlossenen Änderung.
 
     ```text
-    Elternvorgang abgeschlossen
-      → das Kind bleibt beendet. Der Elternzustand hat keinen Rückweg,
-        die Lage wäre nicht mehr auflösbar.
-    Elternvorgang verworfen
-      → das Kind wird nicht allein wieder aufgenommen. Spätestens zugleich
-        mit ihm kehrt der Elternvorgang nach in Klärung zurück.
-    Elternvorgang offen
-      → gewöhnliche Wiederaufnahme des Kindes.
+    beendet   abgeschlossen, verworfen
+    offen     jeder andere Zustand
     ```
 
-    Eltern- und Kindvorgang dürfen gemeinsam oder nacheinander wiederkehren.
-    Nach **jeder einzelnen abgeschlossenen Änderung** muss aber gelten: Ein
-    beendeter Elternvorgang hat kein offenes Kind. Bei getrennter
-    Wiederaufnahme wechselt deshalb zuerst der Elternvorgang nach *in Klärung*
-    und erst danach das Kind.
+    ```text
+    unzulässig   E verworfen        zulässig   E verworfen
+                 └─ T in Arbeit                └─ T verworfen
+
+                 E abgeschlossen               E in Klärung
+                 └─ T in Klärung               └─ T in Arbeit
+    ```
+
+    *Grund:* Bei *abgeschlossen* wäre die Lage nicht mehr auflösbar – der
+    Zustand hat keinen Rückweg. Bei *verworfen* wäre sie widersprüchlich: Der
+    Elternvorgang behauptet, ohne festgestellten Abschluss beendet zu sein,
+    während unter ihm noch gearbeitet wird.
+
+    Bei getrennten Schreibtransaktionen folgen daraus zwei Reihenfolgen:
 
     ```text
-    Ausgang      Epos E  verworfen
-                 └─ T    verworfen
+    Beenden          zuerst das Kind, danach den Elternvorgang
+    Wiederaufnehmen  zuerst den Elternvorgang, danach das Kind
+    ```
 
-    zulässig     E → in Klärung        E  in Klärung
-                                       └─ T verworfen
-                 danach T → in Klärung E  in Klärung
-                                       └─ T in Klärung
+    Beide dürfen auch gemeinsam in einer Schreibtransaktion wechseln;
+    maßgeblich ist der Stand beim Abschluss der Transaktion, nicht der
+    Zwischenstand.
 
-    unzulässig   T → in Klärung        E  verworfen
-                                       └─ T in Klärung
+    **Eine abgeschlossene Änderung ist eine erfolgreich abgeschlossene
+    Schreibtransaktion.** Innerhalb derselben Schreibtransaktion darf ein
+    Zwischenstand die Regel verletzen; bei ihrem Abschluss muss sie gelten.
+    Ohne diese Festlegung bliebe offen, ob schon der einzelne Schreibaufruf
+    gültig enden muss – und damit, ob die Reihenfolge auch innerhalb einer
+    gemeinsamen Schreibtransaktion einzuhalten ist.
+
+    ```text
+    eine Schreibtransaktion    Ausgang  E verworfen └─ T verworfen
+      T → in Klärung                    Zwischenstand verletzt die Regel
+      E → in Klärung                    Endstand hält sie ein
+    → zulässig
+
+    dieselben zwei Schritte in getrennten Schreibtransaktionen
+      T → in Klärung                    abgeschlossene Änderung, E noch
+                                        verworfen
+    → unzulässig; zuerst der Elternvorgang
+    ```
+
+    Die Regel hängt nicht am Zustandswechsel. Auch die Zuordnung erzeugt sie:
+
+    ```text
+    E verworfen, T in Arbeit ohne Elternvorgang
+    T erhält E als Elternvorgang
+    → unzulässig: derselbe verbotene Stand ohne jeden Zustandswechsel
     ```
 21. **Die Pflichtschwelle bleibt nach der Wiederaufnahme erreicht** (§7.1.1,
     Regel 6): Ein Vorgang, der *bereit* war, kehrt mit seinen Pflichtangaben
@@ -3496,16 +3521,20 @@ Hinzu kommt der kontrollierte Zustandswechsel `pm.transition_issue()` mit den
 Regeln, die einen Übergang im Zusammenhang mit anderen Vorgängen und dem
 Zustandsverlauf prüfen (siehe unten).
 
-**Die übrigen Vorgangsregeln haben einen gemeinsamen Ausführungspunkt:** Sie
-prüfen einen Zustandsübergang im Kontext mehrerer Zeilen oder verbinden ihn mit
-einer Nebenfolge. Sie liegen geschlossen in `pm.transition_issue()`, damit kein
-fachlicher Schreibweg an ihnen vorbeiführt:
+**Die übrigen Vorgangsregeln haben zwei Ausführungspunkte.** Regeln über einen
+Zustandsübergang liegen geschlossen in `pm.transition_issue()`, damit kein
+fachlicher Schreibweg an ihnen vorbeiführt. Regel 20 gehört nicht dazu: Sie ist
+eine Invariante über den Tabellenstand; ihre Verletzung kann auch durch eine
+Änderung von `parent_id` entstehen und wird deshalb von einem verzögerten
+Constraint-Trigger geprüft.
 
 ```text
 zulässige Übergänge  die Übergänge aus §7.6 werden über eine abfragbare
                      Tabelle geprüft
-Abschlussprüfung     bei offenen Kindvorgängen oder nicht erfüllten
-                     Abschlusskriterien gesperrt
+Abschlussprüfung     bei nicht erfüllten Abschlusskriterien gesperrt
+Regel 20             kein offenes Kind unter einem beendeten Elternvorgang;
+                     verzögert am Abschluss der Schreibtransaktion geprüft,
+                     nicht in der Übergangsfunktion
 Regel 5              das Epos folgt der gewöhnlichen Übergangstabelle;
                      sein Abschluss verlangt mindestens einen Kindvorgang
 Regel 12             Abhängigkeitsschranke mit begründeter Übergehung,
@@ -3519,15 +3548,18 @@ P-010                Zustand und Zeitpunkte werden geändert und der
 `editor` darf den Zustand nicht unmittelbar ändern. Zustandswechsel erfolgen
 ausschließlich über `pm.transition_issue()`, für die `editor` das
 Ausführungsrecht besitzt. Auch `finished_at` darf `editor` nicht unmittelbar
-ändern; der Zeitpunkt wird ausschließlich durch die Übergangsfunktion bei einem
-Wechsel nach *abgeschlossen* oder *verworfen* gesetzt.
+ändern; im fachlichen Schreibweg wird der Zeitpunkt durch die Übergangsfunktion
+gesetzt – beim Wechsel nach *abgeschlossen* oder *verworfen* – und beim
+Verlassen von *verworfen* wieder entfernt (Regel 18). Außerhalb beider Zustände
+ist er unzulässig.
 
 Der Blockadegrund bleibt dagegen unmittelbar änderbar: Er kann sich während
 derselben Blockade sachlich ändern, ohne dass ein Zustandswechsel stattfindet.
 
-**Die Übergangstabelle im Arbeitsbaum entspricht noch der früheren, weitgehend
-linearen Fassung**; §7.1.2 und die neu gefassten Übergänge aus §7.6 sind am
-Stichtag noch nicht umgesetzt.
+Die Übergangstabelle im Arbeitsbaum entspricht der Fassung aus §7.6: drei
+Bereiche, Eintritt in die Arbeit nur über *bereit*, *in Prüfung* nur aus *in
+Arbeit* oder *blockiert*, Rückweg aus der Arbeit nur nach *in Klärung*,
+*abgeschlossen* ohne Rückweg, *verworfen* wieder aufnehmbar.
 
 **Noch nicht geprüft wird Regel 11 (Vorhaben-Schranke).** Sie setzt den Sprint
 voraus, der nicht Teil des ersten Go-live ist.

@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(57);
+SELECT plan(59);
 
 SELECT has_table('pm', 'issues', 'pm.issues existiert');
 SELECT has_table('pm', 'issue_hierarchy_rules', 'pm.issue_hierarchy_rules existiert');
@@ -759,6 +759,77 @@ SELECT throws_ok(
     '23514',
     NULL,
     'depends_on-Zyklus 281 -> 280 -> 282 -> 281 wird abgelehnt'
+);
+
+-- ------------------------------------------------------------------
+-- Regel 20: ein beendeter Elternvorgang hat kein offenes Kind.
+--
+-- Geprüft wird hier ausdrücklich der Weg OHNE Zustandswechsel. Genau
+-- deshalb liegt die Regel in dieser Migration und nicht in
+-- pm.transition_issue(): editor darf parent_id unmittelbar ändern. Fiele
+-- `UPDATE OF parent_id` je aus dem Trigger heraus, bliebe die Übergangs-
+-- prüfung grün und diese Lücke unbemerkt.
+--
+-- Beide `UPDATE`s laufen über pg_temp.as_editor(), nicht als postgres: Nur so
+-- wird der tatsächliche Schreibweg geprüft. Verlöre editor das Recht
+-- UPDATE(parent_id), meldete Test 58 sonst 42501 statt des erwarteten
+-- Regel-20-Fehlers 23514.
+-- ------------------------------------------------------------------
+
+INSERT INTO pm.issues (
+    id, title, description, state, issue_kind, urgency, finished_at
+) VALUES
+    ('00000000-0000-0000-0000-000000000295',
+     '{"de": "Titeltext", "en": "Title text"}'::jsonb,
+     '{"de": "Titeltext", "en": "Title text"}'::jsonb,
+     'discarded', 'epic', 'low', statement_timestamp()),
+    ('00000000-0000-0000-0000-000000000296',
+     '{"de": "Titeltext", "en": "Title text"}'::jsonb,
+     '{"de": "Titeltext", "en": "Title text"}'::jsonb,
+     'in_progress', 'task', 'low', NULL),
+    ('00000000-0000-0000-0000-000000000297',
+     '{"de": "Titeltext", "en": "Title text"}'::jsonb,
+     '{"de": "Titeltext", "en": "Title text"}'::jsonb,
+     'clarification', 'epic', 'low', NULL);
+
+INSERT INTO pm.object_projects (object_id, project_id)
+SELECT id, (SELECT id FROM pm.projects WHERE key = 'test_issue_project_a')
+  FROM pm.issues
+ WHERE id IN ('00000000-0000-0000-0000-000000000295',
+              '00000000-0000-0000-0000-000000000296',
+              '00000000-0000-0000-0000-000000000297');
+
+-- 58: der eigentliche Umgehungsweg — ein offenes Kind wird nachträglich
+-- unter einen verworfenen Elternvorgang gehängt. Kein Zustandswechsel,
+-- also auch kein Aufruf von pm.transition_issue().
+SELECT throws_ok(
+    $$
+    SET CONSTRAINTS ALL DEFERRED;
+    SELECT pg_temp.as_editor($sql$
+        UPDATE pm.issues
+           SET parent_id = '00000000-0000-0000-0000-000000000295'
+         WHERE id = '00000000-0000-0000-0000-000000000296'
+    $sql$);
+    SET CONSTRAINTS ALL IMMEDIATE;
+    $$,
+    '23514', NULL,
+    'ein offenes Kind darf nicht unter einen verworfenen Elternvorgang gehängt werden'
+);
+
+-- 59: Gegenprobe, damit der Test nicht bloß jedes Umhängen ablehnt —
+-- derselbe offene Vorgang unter einem OFFENEN Elternvorgang ist zulässig.
+SELECT lives_ok(
+    $$
+    SET CONSTRAINTS ALL DEFERRED;
+    SELECT pg_temp.as_editor($sql$
+        UPDATE pm.issues
+           SET parent_id = '00000000-0000-0000-0000-000000000297'
+         WHERE id = '00000000-0000-0000-0000-000000000296'
+    $sql$);
+    SET CONSTRAINTS ALL IMMEDIATE;
+    SET CONSTRAINTS ALL DEFERRED;
+    $$,
+    'ein offenes Kind darf unter einen offenen Elternvorgang gehängt werden'
 );
 
 SELECT * FROM finish();

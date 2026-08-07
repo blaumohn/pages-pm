@@ -750,14 +750,20 @@ SELECT results_eq(
     'L4: der Kindvorgang steht offen'
 );
 
--- 52
+-- 52: Regel 20 wird vom verzögerten Constraint-Trigger aus 013 getragen.
+-- Wechsel und erzwungene Prüfung gehören deshalb in denselben Block, sonst
+-- bliebe das Epos trotz abgewiesener Änderung auf done stehen.
 SELECT throws_ok(
-    $$ SELECT pg_temp.as_editor($sql$
+    $$
+    SET CONSTRAINTS ALL DEFERRED;
+    SELECT pg_temp.as_editor($sql$
         SELECT pm.transition_issue(
             '00000000-0000-0000-0000-000000000431',
             'done',
             '{"de": "Zerlegung abgeschlossen", "en": "Breakdown complete"}'::jsonb)
-    $sql$) $$,
+    $sql$);
+    SET CONSTRAINTS ALL IMMEDIATE;
+    $$,
     '23514',
     NULL,
     'L4: der Abschluss des Epos wird bei offenem Kindvorgang abgewiesen'
@@ -800,14 +806,22 @@ SELECT is(
     'L4: es steht kein Kindvorgang mehr offen'
 );
 
--- 56
+-- 56: Der Abschluss muss auch die verzögerte Prüfung bestehen, nicht nur
+-- den Übergang. Nach der erfolgreichen IMMEDIATE-Prüfung wird wieder auf
+-- DEFERRED zurückgestellt, damit der Modus nicht in die folgenden Tests
+-- hineinwirkt.
 SELECT lives_ok(
-    $$ SELECT pg_temp.as_editor($sql$
+    $$
+    SET CONSTRAINTS ALL DEFERRED;
+    SELECT pg_temp.as_editor($sql$
         SELECT pm.transition_issue(
             '00000000-0000-0000-0000-000000000431',
             'done',
             '{"de": "Zerlegung abgeschlossen", "en": "Breakdown complete"}'::jsonb)
-    $sql$) $$,
+    $sql$);
+    SET CONSTRAINTS ALL IMMEDIATE;
+    SET CONSTRAINTS ALL DEFERRED;
+    $$,
     'L4: das Epos kann nach dem Abschluss seines Kindvorgangs abgeschlossen werden'
 );
 

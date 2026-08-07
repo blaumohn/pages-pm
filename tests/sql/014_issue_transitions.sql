@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(38);
+SELECT plan(42);
 
 SELECT has_table('pm', 'issue_state_transitions', 'pm.issue_state_transitions existiert');
 SELECT has_function(
@@ -100,6 +100,14 @@ INSERT INTO pm.issues (
     ('00000000-0000-0000-0000-000000000333',
      '{"de": "Titeltext", "en": "Title text"}'::jsonb, '{"de": "Titeltext", "en": "Title text"}'::jsonb,
      'inbox', 'task', NULL, '[]'::jsonb, '00000000-0000-0000-0000-000000000332', NULL),
+
+    -- gemeinsames Beenden in EINER Schreibtransaktion (335 ist Kind von 334)
+    ('00000000-0000-0000-0000-000000000334',
+     '{"de": "Titeltext", "en": "Title text"}'::jsonb, '{"de": "Titeltext", "en": "Title text"}'::jsonb,
+     'in_review', 'epic', 'low', '[]'::jsonb, NULL, NULL),
+    ('00000000-0000-0000-0000-000000000335',
+     '{"de": "Titeltext", "en": "Title text"}'::jsonb, '{"de": "Titeltext", "en": "Title text"}'::jsonb,
+     'in_review', 'task', 'low', '[]'::jsonb, '00000000-0000-0000-0000-000000000334', NULL),
 
     -- Epos ohne Kinder gegenüber gewöhnlichem Vorgang ohne Kinder
     ('00000000-0000-0000-0000-000000000330',
@@ -300,14 +308,22 @@ SELECT throws_ok(
     'done wird bei einem nicht erfüllten Abschlusskriterium abgewiesen'
 );
 
--- 18
+-- 18: Regel 20 liegt seit 013 im verzögerten Constraint-Trigger. Der
+-- Zustandswechsel UND das Erzwingen der Prüfung müssen deshalb in demselben
+-- throws_ok-Block liegen — sonst bliebe der Wechsel nach done bestehen,
+-- obwohl die Änderung als Ganzes ungültig ist, und jede folgende Prüfung
+-- liefe gegen einen bereits abgeschlossenen Vorgang.
 SELECT throws_ok(
-    $$ SELECT pm.transition_issue(
-           '00000000-0000-0000-0000-000000000321',
-           'done',
-           '{"de": "Grund", "en": "Reason"}'::jsonb) $$,
+    $$
+    SET CONSTRAINTS ALL DEFERRED;
+    SELECT pm.transition_issue(
+        '00000000-0000-0000-0000-000000000321',
+        'done',
+        '{"de": "Grund", "en": "Reason"}'::jsonb);
+    SET CONSTRAINTS ALL IMMEDIATE;
+    $$,
     '23514', NULL,
-    'done wird bei einem offenen Kindvorgang abgewiesen'
+    'done wird bei einem offenen Kindvorgang am Abschluss der Änderung abgewiesen'
 );
 
 -- 19: das Kind wird verworfen — discarded zählt wie done als geschlossen.
@@ -319,23 +335,63 @@ SELECT lives_ok(
     'der Kindvorgang kann verworfen werden'
 );
 
--- 20
+-- 20: derselbe Vorgang, nachdem sein Kind verworfen wurde. Auch hier wird
+-- die verzögerte Prüfung ausdrücklich erzwungen — ohne sie bewiese der Test
+-- nur, dass der Übergang zulässig ist, nicht dass der Stand danach gilt.
+-- Anschließend wird für die folgenden Tests wieder auf verzögerte Prüfung
+-- zurückgestellt: Anders als bei throws_ok scheitert der Block hier nicht,
+-- sodass IMMEDIATE sonst für den Rest der Testtransaktion stehen bliebe.
 SELECT lives_ok(
-    $$ SELECT pm.transition_issue(
-           '00000000-0000-0000-0000-000000000321',
-           'done',
-           '{"de": "Alle Kinder geschlossen", "en": "All children closed"}'::jsonb) $$,
+    $$
+    SET CONSTRAINTS ALL DEFERRED;
+    SELECT pm.transition_issue(
+        '00000000-0000-0000-0000-000000000321',
+        'done',
+        '{"de": "Alle Kinder geschlossen", "en": "All children closed"}'::jsonb);
+    SET CONSTRAINTS ALL IMMEDIATE;
+    SET CONSTRAINTS ALL DEFERRED;
+    $$,
     'done ist erlaubt, wenn nur noch done/discarded-Kinder bestehen'
 );
 
--- 21
+-- 21: Eltern- und Kindvorgang werden in DERSELBEN Schreibtransaktion
+-- beendet, und zwar bewusst der Elternvorgang ZUERST. Nur diese Reihenfolge
+-- weist die Festlegung aus §7.6, Regel 20 nach: Innerhalb einer
+-- Schreibtransaktion darf ein Zwischenstand die Regel verletzen.
+--
+--   334 -> done     Zwischenstand  334 done └─ 335 in_review   verletzt
+--   335 -> done     Endstand       334 done └─ 335 done        erfüllt
+--
+-- Die umgekehrte Reihenfolge wäre kein Nachweis: Sie war schon vorher ohne
+-- jede vorübergehende Verletzung zulässig. Eine wieder eingeführte
+-- Sofortprüfung nach Regel 20 in pm.transition_issue() würde diesen Test
+-- zum Fehlschlagen bringen.
+SELECT lives_ok(
+    $$
+    SET CONSTRAINTS ALL DEFERRED;
+    SELECT pm.transition_issue(
+        '00000000-0000-0000-0000-000000000334',
+        'done',
+        '{"de": "Zerlegung beendet", "en": "Breakdown finished"}'::jsonb);
+    SELECT pm.transition_issue(
+        '00000000-0000-0000-0000-000000000335',
+        'done',
+        '{"de": "Arbeit beendet", "en": "Work finished"}'::jsonb);
+    SET CONSTRAINTS ALL IMMEDIATE;
+    SET CONSTRAINTS ALL DEFERRED;
+    $$,
+    'Eltern- und Kindvorgang dürfen in derselben Schreibtransaktion beendet '
+    'werden, auch wenn der Zwischenstand Regel 20 verletzt'
+);
+
+-- 22
 SELECT isnt(
     (SELECT finished_at FROM pm.issues WHERE id = '00000000-0000-0000-0000-000000000321'),
     NULL,
     'finished_at wird beim Abschluss automatisch gesetzt'
 );
 
--- 22
+-- 23
 SELECT throws_ok(
     $$ SELECT pm.transition_issue(
            '00000000-0000-0000-0000-000000000330',
@@ -345,7 +401,7 @@ SELECT throws_ok(
     'ein Epos ohne Kindvorgang kann nicht abgeschlossen werden'
 );
 
--- 23–24: Positive Gegenprobe zum kinderlosen Epos — das Epos 332 besitzt
+-- 24–25: Positive Gegenprobe zum kinderlosen Epos — das Epos 332 besitzt
 -- ein zunächst offenes Kind. Nach dessen Verwerfung darf das Epos
 -- abgeschlossen werden.
 SELECT lives_ok(
@@ -356,7 +412,7 @@ SELECT lives_ok(
     'das Kind des Epos kann geschlossen werden'
 );
 
--- 24
+-- 25
 SELECT lives_ok(
     $$ SELECT pm.transition_issue(
            '00000000-0000-0000-0000-000000000332',
@@ -365,7 +421,7 @@ SELECT lives_ok(
     'ein Epos mit mindestens einem geschlossenen Kind kann abgeschlossen werden'
 );
 
--- 25: die Epos-Regel gilt nur für das Epos; ein gewöhnlicher Vorgang ohne
+-- 26: die Epos-Regel gilt nur für das Epos; ein gewöhnlicher Vorgang ohne
 -- Kinder bleibt nach seiner eigenen Art und seinen Kriterien behandelbar.
 SELECT lives_ok(
     $$ SELECT pm.transition_issue(
@@ -379,7 +435,7 @@ SELECT lives_ok(
 -- Blockade (§7.6, Regel 6): der Blockadegrund gehört zum Übergang.
 -- ------------------------------------------------------------------
 
--- 26
+-- 27
 SELECT throws_ok(
     $$ SELECT pm.transition_issue(
            '00000000-0000-0000-0000-000000000340',
@@ -389,7 +445,7 @@ SELECT throws_ok(
     'blocked ohne Blockadegrund wird abgewiesen'
 );
 
--- 27
+-- 28
 SELECT throws_ok(
     $$ SELECT pm.transition_issue(
            '00000000-0000-0000-0000-000000000340',
@@ -400,7 +456,7 @@ SELECT throws_ok(
     'ein Blockadegrund außerhalb des Wechsels nach blocked wird abgewiesen'
 );
 
--- 28
+-- 29
 SELECT lives_ok(
     $$ SELECT pm.transition_issue(
            '00000000-0000-0000-0000-000000000340',
@@ -410,7 +466,7 @@ SELECT lives_ok(
     'blocked mit Blockadegrund ist erlaubt'
 );
 
--- 29: Nachschärfung des Blockadegrunds während derselben Blockade — kein
+-- 30: Nachschärfung des Blockadegrunds während derselben Blockade — kein
 -- Zustandswechsel, deshalb ausdrücklich weiterhin ein gewöhnliches UPDATE.
 SELECT lives_ok(
     $$ SELECT pg_temp.as_editor($sql$
@@ -421,7 +477,7 @@ SELECT lives_ok(
     'editor kann den Blockadegrund während derselben Blockade nachschärfen'
 );
 
--- 30
+-- 31
 SELECT lives_ok(
     $$ SELECT pm.transition_issue(
            '00000000-0000-0000-0000-000000000340',
@@ -430,7 +486,7 @@ SELECT lives_ok(
     'blocked kann wieder verlassen werden'
 );
 
--- 31
+-- 32
 SELECT is(
     (SELECT blocker_reason FROM pm.issues WHERE id = '00000000-0000-0000-0000-000000000340'),
     NULL,
@@ -446,7 +502,7 @@ SELECT is(
 -- Pflichtschwelle.
 -- ------------------------------------------------------------------
 
--- 32
+-- 33
 SELECT throws_ok(
     $$ SELECT pm.transition_issue(
            '00000000-0000-0000-0000-000000000301',
@@ -463,7 +519,7 @@ SELECT throws_ok(
 -- Verlaufsfehler, den §2 des Zustandsdokuments verlangt.
 -- ------------------------------------------------------------------
 
--- 33
+-- 34
 SELECT throws_ok(
     $$ SELECT pm.transition_issue(
            '00000000-0000-0000-0000-000000000350',
@@ -473,14 +529,14 @@ SELECT throws_ok(
     'ein Zustandswechsel mit unvollständigem Grund scheitert am Verlaufseintrag'
 );
 
--- 34
+-- 35
 SELECT is(
     (SELECT state FROM pm.issues WHERE id = '00000000-0000-0000-0000-000000000350'),
     'inbox',
     'der Zustand ist nach dem gescheiterten Verlaufseintrag unverändert'
 );
 
--- 35
+-- 36
 SELECT is(
     (SELECT count(*) FROM pm.state_history
       WHERE object_id = '00000000-0000-0000-0000-000000000350'),
@@ -492,7 +548,7 @@ SELECT is(
 -- Rechte: pm.transition_issue() ist der einzige Schreibweg auf state.
 -- ------------------------------------------------------------------
 
--- 36
+-- 37
 SELECT lives_ok(
     $$ SELECT pg_temp.as_editor($sql$
         SELECT pm.transition_issue(
@@ -503,7 +559,7 @@ SELECT lives_ok(
     'editor kann pm.transition_issue() ausführen'
 );
 
--- 37
+-- 38
 SELECT throws_ok(
     $$ SELECT pg_temp.as_editor($sql$
         UPDATE pm.issues SET state = 'ready'
@@ -513,7 +569,7 @@ SELECT throws_ok(
     'editor kann state weiterhin nicht unmittelbar ändern'
 );
 
--- 38
+-- 39
 SELECT throws_ok(
     $$ SELECT pg_temp.as_editor($sql$
         UPDATE pm.issues
@@ -522,6 +578,97 @@ SELECT throws_ok(
     $sql$) $$,
     '42501', NULL,
     'editor kann finished_at nicht unmittelbar ändern'
+);
+
+-- ------------------------------------------------------------------
+-- Vollständigkeit der Übergangstabelle (§7.6, "Zustände und Übergänge").
+--
+-- Die Einzeltests oben prüfen tragende Kanten an Beispielen. Diese Prüfung
+-- stellt die gesamte Tabelle gegen die Spezifikation. Sie fällt aus, sobald
+-- eine Kante hinzukommt oder verschwindet — auch eine, für die es keinen
+-- Einzeltest gibt.
+-- ------------------------------------------------------------------
+
+-- 40
+SELECT set_eq(
+    $$ SELECT from_state || ' -> ' || to_state FROM pm.issue_state_transitions $$,
+    $$ VALUES
+        ('inbox -> clarification'), ('inbox -> ready'), ('inbox -> discarded'),
+        ('clarification -> inbox'), ('clarification -> ready'),
+        ('clarification -> discarded'),
+        ('ready -> clarification'), ('ready -> planned'), ('ready -> in_progress'),
+        ('ready -> blocked'), ('ready -> discarded'),
+        ('planned -> clarification'), ('planned -> ready'),
+        ('planned -> in_progress'), ('planned -> blocked'), ('planned -> discarded'),
+        ('in_progress -> clarification'), ('in_progress -> ready'),
+        ('in_progress -> planned'), ('in_progress -> blocked'),
+        ('in_progress -> in_review'), ('in_progress -> discarded'),
+        ('blocked -> clarification'), ('blocked -> ready'), ('blocked -> planned'),
+        ('blocked -> in_progress'), ('blocked -> in_review'), ('blocked -> discarded'),
+        ('in_review -> clarification'), ('in_review -> ready'),
+        ('in_review -> planned'), ('in_review -> in_progress'),
+        ('in_review -> blocked'), ('in_review -> done'), ('in_review -> discarded'),
+        ('discarded -> clarification')
+    $$,
+    'pm.issue_state_transitions enthält genau die 36 Kanten aus §7.6'
+);
+
+-- ------------------------------------------------------------------
+-- Wiederaufnahme aus discarded (Regeln 18, 19 und 20 zusammen).
+--
+-- Der Ablauf aus §7.6, Regel 20: Ein verworfener Elternvorgang und sein
+-- verworfenes Kind kehren gemeinsam zurück. Auch hier wird bewusst das
+-- KIND zuerst geöffnet — der Zwischenstand verletzt Regel 20, der Endstand
+-- hält sie ein. In getrennten Schreibtransaktionen wäre derselbe erste
+-- Schritt unzulässig.
+-- ------------------------------------------------------------------
+
+INSERT INTO pm.issues (
+    id, title, description, state, issue_kind, urgency, criteria, parent_id, finished_at
+) VALUES
+    ('00000000-0000-0000-0000-000000000336',
+     '{"de": "Titeltext", "en": "Title text"}'::jsonb, '{"de": "Titeltext", "en": "Title text"}'::jsonb,
+     'discarded', 'epic', 'low', '[]'::jsonb, NULL, statement_timestamp()),
+    ('00000000-0000-0000-0000-000000000337',
+     '{"de": "Titeltext", "en": "Title text"}'::jsonb, '{"de": "Titeltext", "en": "Title text"}'::jsonb,
+     'discarded', 'task', 'low', '[]'::jsonb,
+     '00000000-0000-0000-0000-000000000336', statement_timestamp());
+
+INSERT INTO pm.object_projects (object_id, project_id)
+SELECT id, (SELECT id FROM pm.projects WHERE key = 'test_transition_project_a')
+  FROM pm.issues
+ WHERE id IN ('00000000-0000-0000-0000-000000000336',
+              '00000000-0000-0000-0000-000000000337');
+
+-- 41
+SELECT lives_ok(
+    $$
+    SET CONSTRAINTS ALL DEFERRED;
+    SELECT pm.transition_issue(
+        '00000000-0000-0000-0000-000000000337',
+        'clarification',
+        '{"de": "Wieder gebraucht", "en": "Needed again"}'::jsonb);
+    SELECT pm.transition_issue(
+        '00000000-0000-0000-0000-000000000336',
+        'clarification',
+        '{"de": "Wieder gebraucht", "en": "Needed again"}'::jsonb);
+    SET CONSTRAINTS ALL IMMEDIATE;
+    SET CONSTRAINTS ALL DEFERRED;
+    $$,
+    'Eltern- und Kindvorgang dürfen in derselben Schreibtransaktion aus '
+    'discarded wieder aufgenommen werden'
+);
+
+-- 42: Regel 18 — der Beendigungszeitpunkt wird beim Verlassen von discarded
+-- entfernt. Ohne das schlüge bereits Test 41 am finished_at-Verbot aus 013
+-- fehl; hier wird der Wert selbst nachgewiesen.
+SELECT is(
+    (SELECT count(*) FROM pm.issues
+      WHERE id IN ('00000000-0000-0000-0000-000000000336',
+                   '00000000-0000-0000-0000-000000000337')
+        AND finished_at IS NULL),
+    2::bigint,
+    'der Beendigungszeitpunkt wird bei der Wiederaufnahme aus discarded entfernt'
 );
 
 SELECT * FROM finish();

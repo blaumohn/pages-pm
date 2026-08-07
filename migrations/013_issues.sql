@@ -15,9 +15,9 @@
 --     additive Migration.
 --   * Sprintauswahl, Sprintrolle, Regel 11 (Vorhaben-Schranke) — Sprint ist
 --     ausdrücklich nicht Teil des ersten Go-live (Phase-B-Entscheidung zu
---     §12.5).
---   * Regel 1 (Abschluss: erfüllte Kriterien, kein offener Kindvorgang),
---     Regel 5 ("ein Epos wird nicht selbst bearbeitet") und Regel 12
+--     §12.4).
+--   * Regel 1 (Abschluss: erfüllte Kriterien), Regel 5 ("ein Epos wird nicht
+--     selbst bearbeitet") und Regel 12
 --     (Abhängigkeitsschranke, übergehbar) — allesamt Regeln über einen
 --     Zustandsübergang im Kontext, keine reinen Spaltenregeln. Sie gehören
 --     geschlossen in die spätere atomare Übergangsfunktion
@@ -30,13 +30,14 @@
 --   * Übergehungen (Nebenfolge aus Regel 12): fällt mit der Übergangs-
 --     funktion zusammen, nutzt pm.state_history (event_kind = 'override',
 --     bereits in 012 vorgesehen), keine eigene Tabelle hier.
---   * Die Abschlusssperre bei offenen Kindvorgängen ist spezifiziert (Regel 1),
---     aber ebenfalls eine Regel über einen Zustandsübergang: sie prüft
---     pm.transition_issue() beim Wechsel nach `done`. Eine automatische
---     Zustandsausbreitung von Kindern auf den Elternvorgang ist damit NICHT
---     vorausgesetzt. Ein Epos folgt dabei der gewöhnlichen Übergangstabelle;
---     "nicht selbst bearbeitet" (Regel 5) sperrt weder `in_progress` noch
---     `in_review`, verlangt für den Abschluss aber mindestens einen Kindvorgang.
+-- Regel 20 (kein offenes Kind unter einem beendeten Elternvorgang) gehört
+-- dagegen in diese Migration: Sie ist keine Übergangsregel, sondern eine
+-- Invariante über den Tabellenstand, und ihre Verletzung kann auch durch ein
+-- bloßes Umhängen von parent_id entstehen — das editor unmittelbar darf.
+-- Sie liegt deshalb als verzögerter Constraint-Trigger hier, nicht in
+-- pm.transition_issue(). Eine automatische Zustandsausbreitung von Kindern
+-- auf den Elternvorgang ist damit NICHT vorausgesetzt: Die Regel weist ab,
+-- sie ändert nichts selbst.
 --
 -- Zwei Klassen von Prüfregeln, technisch unterschiedlich behandelt:
 --   * Regeln über Spalten EINER Zeile (Sprachkarten, Kriterienschema,
@@ -131,7 +132,8 @@ CREATE TABLE pm.issues (
     implementation_notes jsonb,
 
     started_at           timestamptz,
-    -- Pflicht in abgeschlossen und verworfen — geprüft im Trigger unten.
+    -- Pflicht in abgeschlossen und verworfen, sonst unzulässig (§7.6,
+    -- Regel 18) — geprüft im Trigger unten.
     finished_at          timestamptz,
 
     created_at           timestamptz NOT NULL
@@ -179,7 +181,11 @@ COMMENT ON COLUMN pm.issues.started_at IS
     'Beginn. Fachliche Angabe, keine Bearbeitungsspur — optional, keine '
     'genannte Schwelle in §7.6.';
 COMMENT ON COLUMN pm.issues.finished_at IS
-    'Abschlusszeitpunkt. Pflicht in done und discarded.';
+    'Beendigungszeitpunkt (§7.6, Regel 18). Pflicht in done und discarded, '
+    'außerhalb beider unzulässig. Beim Verlassen von discarded wird er durch '
+    'pm.transition_issue() entfernt; das Feld nennt die gegenwärtig wirksame '
+    'Beendigung. Die Nachvollziehbarkeit früherer Beendigungen gehört zum '
+    'Zustandsverlauf (P-010).';
 
 -- ---------------------------------------------------------------------
 -- Registrierung (§7.3, gemeinsames Mindestraster) nach dem Muster aus
@@ -517,6 +523,11 @@ BEGIN
         RAISE EXCEPTION 'finished_at ist in % Pflicht', NEW.state
             USING ERRCODE = '23514';
     END IF;
+    IF NEW.state NOT IN ('done', 'discarded') AND NEW.finished_at IS NOT NULL THEN
+        RAISE EXCEPTION
+            'finished_at ist außerhalb von done und discarded unzulässig'
+            USING ERRCODE = '23514';
+    END IF;
 
     RETURN NEW;
 END;
@@ -672,6 +683,135 @@ CREATE TRIGGER issues_enforce_hierarchy_rules
     ON pm.issues
     FOR EACH ROW
     EXECUTE FUNCTION pm.enforce_issue_hierarchy_rules();
+
+-- ---------------------------------------------------------------------
+-- Hierarchie, Teil 2 (verzögert): ein beendeter Elternvorgang hat kein
+-- offenes Kind (§7.6, Regel 20). "Beendet" heißt done ODER discarded —
+-- daher ended_ und nicht finished_, das sonst mit finished_at und damit mit
+-- "abgeschlossen" verwechselt würde.
+--
+-- Warum hier und nicht in pm.transition_issue(): Die Regel ist eine Aussage
+-- über den Tabellenstand, nicht über einen Übergang. Sie entsteht auch ohne
+-- jeden Zustandswechsel, weil editor parent_id unmittelbar ändern darf —
+-- ein offenes Kind ließe sich sonst nachträglich unter einen beendeten
+-- Elternvorgang hängen. Eine Prüfung allein in der Übergangsfunktion hätte
+-- genau diese Lücke.
+--
+-- Warum DEFERRABLE INITIALLY DEFERRED: §7.6, Regel 20 legt ausdrücklich
+-- fest, dass eine abgeschlossene Änderung eine erfolgreich abgeschlossene
+-- Schreibtransaktion ist. Innerhalb derselben Transaktion darf ein
+-- Zwischenstand die Regel verletzen:
+--
+--   BEGIN;
+--     T verworfen -> in Klärung     Zwischenstand verletzt die Regel
+--     E verworfen -> in Klärung     Endstand hält sie ein
+--   COMMIT;                         zulässig
+--
+-- Dieselben zwei Schritte in getrennten Transaktionen sind dagegen
+-- unzulässig, weil die erste bereits eine abgeschlossene Änderung ist. Eine
+-- sofortige Prüfung würde den ersten Fall falsch abweisen und damit die in
+-- der Spezifikation zugesagte gemeinsame Wiederaufnahme unmöglich machen.
+--
+-- Geprüft wird stets die geänderte Zeile, und zwar in beide Richtungen:
+-- ist sie selbst beendet, darf sie kein offenes Kind haben; ist sie offen,
+-- darf ihr Elternvorgang nicht beendet sein. Damit genügt ein Trigger für
+-- beide Wege — wer auch immer sich ändert, prüft seine eigene Seite.
+--
+-- Die Meldungen nennen die verletzte Invariante, nicht einen Reparaturweg:
+-- Der Trigger weiß nicht, ob ein Zustandswechsel, ein Umhängen oder eine
+-- mehrteilige Änderung beabsichtigt war, und bei E = done gäbe es den Weg
+-- "zuerst den Elternvorgang öffnen" gar nicht. Die zulässigen Reihenfolgen
+-- stehen in §7.6, Regel 20.
+-- ---------------------------------------------------------------------
+
+CREATE FUNCTION pm.issue_open_children(p_issue_id uuid)
+RETURNS TABLE (issue_id uuid, state text)
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT child.id, child.state
+      FROM pm.issues AS child
+     WHERE child.parent_id = p_issue_id
+       AND child.state NOT IN ('done', 'discarded')
+     ORDER BY child.id;
+$$;
+
+COMMENT ON FUNCTION pm.issue_open_children(uuid) IS
+    'Unmittelbare Kindvorgänge von p_issue_id, die weder done noch discarded '
+    'sind (§7.6, Regel 20). Nur die unmittelbare Ebene: erfüllt jedes '
+    'Eltern-Kind-Paar die Invariante, gilt sie über die ganze Hierarchie.';
+
+CREATE FUNCTION pm.check_ended_parent_has_no_open_child(p_issue_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_state        text;
+    v_parent_id    uuid;
+    v_parent_state text;
+    v_open_child   uuid;
+BEGIN
+    SELECT state, parent_id INTO v_state, v_parent_id
+      FROM pm.issues WHERE id = p_issue_id;
+
+    -- Die Zeile kann innerhalb derselben Transaktion wieder gelöscht worden
+    -- sein; dann gibt es nichts zu prüfen.
+    IF NOT FOUND THEN
+        RETURN;
+    END IF;
+
+    IF v_state IN ('done', 'discarded') THEN
+        SELECT issue_id INTO v_open_child
+          FROM pm.issue_open_children(p_issue_id) LIMIT 1;
+
+        IF v_open_child IS NOT NULL THEN
+            RAISE EXCEPTION
+                'Vorgang % ist % und hat den offenen Kindvorgang %; '
+                'ein beendeter Elternvorgang darf kein offenes Kind haben',
+                p_issue_id, v_state, v_open_child
+                USING ERRCODE = '23514';
+        END IF;
+
+        RETURN;
+    END IF;
+
+    IF v_parent_id IS NULL THEN
+        RETURN;
+    END IF;
+
+    SELECT state INTO v_parent_state FROM pm.issues WHERE id = v_parent_id;
+
+    IF v_parent_state IN ('done', 'discarded') THEN
+        RAISE EXCEPTION
+            'Vorgang % ist offen, sein Elternvorgang % ist aber %; '
+            'ein beendeter Elternvorgang darf kein offenes Kind haben',
+            p_issue_id, v_parent_id, v_parent_state
+            USING ERRCODE = '23514';
+    END IF;
+END;
+$$;
+
+COMMENT ON FUNCTION pm.check_ended_parent_has_no_open_child(uuid) IS
+    '§7.6, Regel 20: Ein beendeter (done oder discarded) Elternvorgang hat '
+    'kein offenes Kind. Prüft p_issue_id in beide Richtungen — als möglicher '
+    'Elternvorgang gegen seine Kinder, als mögliches Kind gegen seinen '
+    'Elternvorgang.';
+
+CREATE FUNCTION pm.issues_check_ended_parent_trigger()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    PERFORM pm.check_ended_parent_has_no_open_child(NEW.id);
+    RETURN NULL;
+END;
+$$;
+
+CREATE CONSTRAINT TRIGGER issues_enforce_ended_parent
+    AFTER INSERT OR UPDATE OF state, parent_id ON pm.issues
+    DEFERRABLE INITIALLY DEFERRED
+    FOR EACH ROW
+    EXECUTE FUNCTION pm.issues_check_ended_parent_trigger();
 
 -- ---------------------------------------------------------------------
 -- Verzögerte, tabellenübergreifende Prüfungen (siehe Kopf): Umfang-Pflicht
@@ -941,5 +1081,9 @@ GRANT SELECT
 GRANT SELECT
     ON pm.issue_hierarchy_rules
     TO editor, reader;
+
+-- Lesbare Auskunft zu Regel 20: offene unmittelbare Kindvorgänge.
+REVOKE ALL ON FUNCTION pm.issue_open_children(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION pm.issue_open_children(uuid) TO editor, reader;
 
 RESET ROLE;

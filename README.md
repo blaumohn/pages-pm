@@ -6,7 +6,6 @@
 
 # Pages PM
 <!-- mdman:toc:start -->
-
 - [Einleitung](#einleitung)
 - [1. Was ich gesucht habe – und was Pages PM daraus macht](#1-was-ich-gesucht-habe--und-was-pages-pm-daraus-macht)
   - [Projektarbeit liegt in getrennten Systemen](#projektarbeit-liegt-in-getrennten-systemen)
@@ -20,8 +19,8 @@
 - [4. Gegenwärtiger Stand im Einzelnen](#4-gegenwärtiger-stand-im-einzelnen)
 - [5. In fünf Minuten starten](#5-in-fünf-minuten-starten)
 - [6. Technisches Modell](#6-technisches-modell)
-- [7. Repository-Aufbau](#7-repositoryaufbau)
-- [8. Weg zum ersten Go-live](#8-weg-zum-ersten-golive)
+- [7. Repository-Aufbau](#7-repository-aufbau)
+- [8. Weg zum ersten Go-live](#8-weg-zum-ersten-go-live)
 - [Lizenz](#lizenz)
 
 ---
@@ -52,9 +51,8 @@ depends_on #4c19 wird vor „in Arbeit“ geprüft
 ```
 
 > **Stand:** Die PostgreSQL-Grundlage und der erste Vorgangsweg sind umgesetzt
-> und getestet. Die Spezifikation ist bei den Vorgangsübergängen bereits weiter
-> als der Arbeitsbaum; vor `pm.objects` werden diese Änderungen noch umgesetzt
-> und getestet. Der Weg zum ersten Go-live steht
+> und getestet, einschließlich der aktuellen Vorgangsübergänge der Spezifikation.
+> Als Nächstes folgt `pm.objects`. Der Weg zum ersten Go-live steht
 > [weiter unten](#8-weg-zum-ersten-go-live). Die folgenden Beispiele zeigen das
 > vorgesehene Zusammenspiel, nicht den Ist-Zustand.
 
@@ -228,12 +226,15 @@ Umgesetzt und getestet sind derzeit:
   zu demselben Projekt;
 - der kontrollierte Zustandswechsel des Vorgangs (zulässige Übergänge,
   Abhängigkeitsschranke mit begründeter Übergehung, Epos-Abschluss nur bei
-  mindestens einem Kind sowie Abschlusssperre bei offenen Kindvorgängen oder
-  unerfüllten Abschlusskriterien), atomar verbunden mit dem Zustandsverlauf.
+  mindestens einem Kind sowie Abschlusssperre bei unerfüllten
+  Abschlusskriterien), atomar verbunden mit dem Zustandsverlauf;
+- die Regel, dass ein beendeter Elternvorgang kein offenes Kind hat — geprüft
+  am Abschluss der Schreibtransaktion, damit Eltern- und Kindvorgang gemeinsam
+  in einer Schreibtransaktion beendet oder wieder aufgenommen werden können.
 
-Noch nicht umgesetzt: die aktuellen Vorgangsübergänge der Spezifikation,
-die gemeinsame `pm.objects`-Lesesicht, die Fachtabellen für die weiteren
-geplanten Facharten sowie der Python-Renderer für GitHub Pages. Eine
+Noch nicht umgesetzt: die gemeinsame `pm.objects`-Lesesicht, die Fachtabellen
+für die weiteren geplanten Facharten sowie der Python-Renderer für GitHub
+Pages. Eine
 verantwortliche Identität führt der Vorgang für den ersten Go-live bewusst
 noch nicht (§10.2 der Spezifikation). Sprint gehört bewusst nicht zum ersten
 Go-live (§12.4) — es wird erst umgesetzt, sobald ein konkreter Projektablauf
@@ -369,26 +370,26 @@ ihren Regeln über die einzelne Zeile und die Hierarchie sowie der
 **kontrollierte Zustandswechsel** (`pm.transition_issue()`: zulässige
 Übergänge, Auslösung der bestehenden Pflichtschwellen, Abhängigkeitsschranke
 mit begründeter Übergehung, Epos-Abschluss nur bei mindestens einem Kind,
-Abschlusssperre bei offenen Kindvorgängen oder unerfüllten
-Abschlusskriterien sowie Verlaufseintrag in derselben Transaktion) sind
-umgesetzt. Es folgen, in dieser Reihenfolge:
+Abschlusssperre bei unerfüllten Abschlusskriterien sowie Verlaufseintrag in
+derselben Transaktion) sind umgesetzt. Ebenso die Regel, dass ein beendeter
+Elternvorgang kein offenes Kind hat — als Invariante über den Tabellenstand,
+geprüft am Abschluss der Schreibtransaktion. Es folgen, in dieser Reihenfolge:
 
-1. Die Vorgangsübergänge an die aktuelle Spezifikation angleichen und testen.
-2. `pm.objects` als gemeinsame Lesesicht (P-011) ergänzen — sie entsteht
+1. `pm.objects` als gemeinsame Lesesicht (P-011) ergänzen — sie entsteht
    bewusst erst nach der Vorgangstabelle, weil sie vorher kaum Inhalt hätte.
-3. Den SQL-Einstiegswrapper (`scripts/write-sql.sh`) bereitstellen:
+2. Den SQL-Einstiegswrapper (`scripts/write-sql.sh`) bereitstellen:
    Verbindung als `editor`, `ON_ERROR_STOP`, transaktionale Ausführung eines
    SQL-Skripts — der erste echte Vorgang soll nicht mehr per Hand in `psql`
    entstehen.
-4. Den ersten echten Pages-PM-Vorgang anlegen und die für den
+3. Den ersten echten Pages-PM-Vorgang anlegen und die für den
    End-to-End-Nachweis benötigten weiteren Vorgänge erfassen.
-5. Einen vollständigen End-to-End-Ablauf durchführen (§11 der Spezifikation);
+4. Einen vollständigen End-to-End-Ablauf durchführen (§11 der Spezifikation);
    ausgewählte geprüfte Ausschnitte ersetzen später die vorläufigen Beispiele
    in dieser README.
-6. Die weitere Entwicklung von Pages PM im System selbst verwalten: die
+5. Die weitere Entwicklung von Pages PM im System selbst verwalten: die
    nächsten Schema- und Fachumsetzungen als wirkliche Vorgänge erfassen sowie
    benötigte historische Inhalte bedarfsgesteuert übernehmen.
-7. Weitere Facharten ergänzen, sobald ein konkreter Projektablauf sie
+6. Weitere Facharten ergänzen, sobald ein konkreter Projektablauf sie
    benötigt — kein Vorratsbau aller angenommenen Facharten.
 
 Nach dem ersten Go-live gehören zum festgelegten weiteren Ausbau: die

@@ -20,7 +20,7 @@
 - [5. Get started in five minutes](#5-get-started-in-five-minutes)
 - [6. Technical model](#6-technical-model)
 - [7. Repository structure](#7-repository-structure)
-- [8. Path to the first go-live](#8-path-to-the-first-golive)
+- [8. Path to the first go-live](#8-path-to-the-first-go-live)
 - [License](#license)
 
 ---
@@ -51,9 +51,8 @@ depends_on #4c19 is checked before "in progress"
 ```
 
 > **Status:** The PostgreSQL foundation and the first issue path are
-> implemented and tested. On issue transitions the specification is already
-> ahead of the working tree; those changes will be implemented and tested
-> before `pm.objects`. The path to the first go-live is
+> implemented and tested, including the specification's current issue
+> transitions. Next comes `pm.objects`. The path to the first go-live is
 > [further below](#8-path-to-the-first-go-live). The examples below show
 > the intended interplay, not the current state.
 
@@ -224,13 +223,15 @@ Implemented and tested today:
   requirement that parent and child issue belong to the same project;
 - the controlled state transition of an issue (permitted transitions,
   dependency barrier with a justified override, an epic's completion barrier
-  requiring at least one child, and the completion barrier for open child
-  issues or unfulfilled completion criteria), atomically linked with the
-  state history.
+  requiring at least one child, and the completion barrier for unfulfilled
+  completion criteria), atomically linked with the state history;
+- the rule that an ended parent issue has no open child — checked when the
+  write transaction completes, so that parent and child issue can be ended or
+  resumed together in a single write transaction.
 
-Not yet implemented: the specification's current issue transitions, the
-shared `pm.objects` read view, the domain tables for the remaining planned
-domain types, and the Python renderer for GitHub Pages. For
+Not yet implemented: the shared `pm.objects` read view, the domain tables for
+the remaining planned domain types, and the Python renderer for GitHub Pages.
+For
 the first go-live an issue deliberately carries no responsible identity yet
 (§10.2 of the specification). Sprint is deliberately excluded from the first
 go-live (§12.4) — it will be implemented once a concrete project workflow
@@ -362,26 +363,26 @@ single-row and hierarchy rules, and the **controlled state transition**
 (`pm.transition_issue()`: permitted transitions, triggering of the existing
 required-field thresholds, the dependency barrier with a justified override,
 an epic's completion barrier requiring at least one child, the completion
-barrier for open child issues or unfulfilled completion criteria, and the
-history entry written in the same transaction) are implemented. What follows,
-in this order:
+barrier for unfulfilled completion criteria, and the history entry written in
+the same transaction) are implemented. So is the rule that an ended parent
+issue has no open child — as an invariant over the table state, checked when
+the write transaction completes. What follows, in this order:
 
-1. Align the issue transitions with the current specification and test them.
-2. Add `pm.objects` as the shared read view (P-011) — deliberately built
+1. Add `pm.objects` as the shared read view (P-011) — deliberately built
    only after the issue table, since it would have little content before
    that.
-3. Provide the SQL entry-point wrapper (`scripts/write-sql.sh`): connects as
+2. Provide the SQL entry-point wrapper (`scripts/write-sql.sh`): connects as
    `editor`, `ON_ERROR_STOP`, transactional execution of a SQL script — the
    first real issue should no longer be created by hand in `psql`.
-4. Create the first real Pages PM issue and record the further issues needed
+3. Create the first real Pages PM issue and record the further issues needed
    for end-to-end verification.
-5. Carry out a full end-to-end walkthrough (§11 of the specification);
+4. Carry out a full end-to-end walkthrough (§11 of the specification);
    selected, verified excerpts later replace the placeholder examples in this
    README.
-6. Manage Pages PM's own further development within the system itself:
+5. Manage Pages PM's own further development within the system itself:
    track the next schema and domain work as real issues, and migrate needed
    historical content on demand.
-7. Add further domain types once a concrete project workflow needs them — no
+6. Add further domain types once a concrete project workflow needs them — no
    stockpiling of every accepted domain type.
 
 After the first go-live, the defined further expansion comprises:

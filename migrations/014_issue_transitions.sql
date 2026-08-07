@@ -17,8 +17,9 @@
 -- ausdrücklich fest, und §9.3 zeigt ein Epos im Zustand in Arbeit. Das Epos
 -- folgt derselben Übergangstabelle wie jede andere Vorgangsart. Für das Epos
 -- gilt beim Abschluss zusätzlich, dass es mindestens einen Kindvorgang
--- besitzen muss. Wie bei jedem Elternvorgang darf außerdem kein Kind offen
--- sein. Eine Sperre gegen `in_progress` wäre dagegen in sich widersprüchlich:
+-- besitzen muss; dass kein Kind offen sein darf, ist dagegen Regel 20 und
+-- gilt für jeden Elternvorgang — geprüft in 013_issues.sql, nicht hier.
+-- Eine Sperre gegen `in_progress` wäre dagegen in sich widersprüchlich:
 -- der einzige Weg nach `done` führt über `in_progress` und `in_review`, ein
 -- gesperrtes Epos könnte nie abgeschlossen werden.
 --
@@ -41,10 +42,25 @@ SET ROLE schema_owner;
 -- diese Liste, um "was ist von hier aus möglich?" beantworten zu können,
 -- ohne den Funktionsrumpf zu lesen.
 --
--- done und discarded treten nirgends als from_state auf: "abgeschlossen hat
--- keinen Rückweg" (§7.6), und ein verworfener Vorgang wird nicht
--- wiederbelebt. Eine später erkannte Lücke ist ein neuer Vorgang mit
--- Verweis auf den alten.
+-- Die Tabelle folgt den drei Bereichen aus §7.6:
+--
+--   Beurteilung   inbox, clarification
+--   Arbeit        ready, planned, in_progress, blocked, in_review
+--   Ausgang       done, discarded
+--
+-- Innerhalb der Arbeit ist jeder Übergang erlaubt, mit einer Ausnahme:
+-- in_review ist nur aus in_progress oder blocked erreichbar, denn geprüft
+-- wird geleistete Arbeit. Der Eintritt in die Arbeit führt immer über ready;
+-- der Rückweg aus ihr führt nach clarification, nicht nach inbox (neue
+-- Erkenntnis macht einen Vorgang klärungsbedürftig, nicht wieder
+-- unbeurteilt).
+--
+-- Die beiden Ausgangszustände unterscheiden sich in ihrer Endgültigkeit
+-- (§7.6): done tritt nirgends als from_state auf — der Abschluss wurde
+-- festgestellt, eine später erkannte Lücke ist ein neuer Vorgang mit Verweis
+-- auf den alten. discarded heißt dagegen "ohne festgestellten Abschluss
+-- beendet" und darf nach clarification zurück; dieselbe verworfene Arbeit
+-- ist dieselbe Sache (Regel 19).
 -- ---------------------------------------------------------------------
 
 CREATE TABLE pm.issue_state_transitions (
@@ -57,36 +73,61 @@ CREATE TABLE pm.issue_state_transitions (
 
 COMMENT ON TABLE pm.issue_state_transitions IS
     'Zulässige Zustandsübergänge eines Vorgangs (§7.6, "Zustände und '
-    'Übergänge"). Ein Zustand ohne Zeile als from_state ist endgültig '
-    '(done, discarded). Gilt für alle Vorgangsarten gleichermaßen — auch '
-    'für das Epos (§7.6, Regel 5 ist keine Zustandssperre).';
+    'Übergänge"). Ein Zustand ohne Zeile als from_state ist endgültig; das '
+    'ist ausschließlich done. discarded ist beendet, aber nicht endgültig '
+    'und führt nach clarification zurück. Gilt für alle Vorgangsarten '
+    'gleichermaßen — auch für das Epos (§7.6, Regel 5 ist keine '
+    'Zustandssperre).';
 
 INSERT INTO pm.issue_state_transitions (from_state, to_state) VALUES
+    -- Beurteilung: beide Richtungen. Eine begonnene Sichtung darf
+    -- abgebrochen werden, bevor ein belastbares Urteil entstanden ist.
     ('inbox',         'clarification'),
     ('inbox',         'ready'),
     ('inbox',         'discarded'),
 
-    ('clarification', 'ready'),
     ('clarification', 'inbox'),
+    ('clarification', 'ready'),
     ('clarification', 'discarded'),
 
+    -- Arbeit: untereinander frei, in_review nur aus in_progress/blocked,
+    -- Rückweg aus der Arbeit ausschließlich nach clarification.
+    ('ready',         'clarification'),
     ('ready',         'planned'),
     ('ready',         'in_progress'),
+    ('ready',         'blocked'),
     ('ready',         'discarded'),
 
-    ('planned',       'in_progress'),
+    ('planned',       'clarification'),
     ('planned',       'ready'),
+    ('planned',       'in_progress'),
+    ('planned',       'blocked'),
     ('planned',       'discarded'),
 
+    ('in_progress',   'clarification'),
+    ('in_progress',   'ready'),
+    ('in_progress',   'planned'),
     ('in_progress',   'blocked'),
     ('in_progress',   'in_review'),
     ('in_progress',   'discarded'),
 
+    ('blocked',       'clarification'),
+    ('blocked',       'ready'),
+    ('blocked',       'planned'),
     ('blocked',       'in_progress'),
+    ('blocked',       'in_review'),
     ('blocked',       'discarded'),
 
+    ('in_review',     'clarification'),
+    ('in_review',     'ready'),
+    ('in_review',     'planned'),
+    ('in_review',     'in_progress'),
+    ('in_review',     'blocked'),
     ('in_review',     'done'),
-    ('in_review',     'in_progress');
+    ('in_review',     'discarded'),
+
+    -- Ausgang: done ohne Rückweg, discarded wieder aufnehmbar.
+    ('discarded',     'clarification');
 
 -- ---------------------------------------------------------------------
 -- Offene unmittelbare Vorgänger über depends_on (§7.6, Regel 12). Eigene
@@ -118,25 +159,6 @@ COMMENT ON FUNCTION pm.issue_open_dependencies(uuid) IS
     'discarded sind (§7.6, Regel 12). Projektübergreifende Kanten sind '
     'ausdrücklich eingeschlossen — depends_on kennt keine Projektschranke '
     '(§7.6, Regel 4 gilt nur für die Hierarchie).';
-
-CREATE FUNCTION pm.issue_open_children(p_issue_id uuid)
-RETURNS TABLE (issue_id uuid, state text)
-LANGUAGE sql
-STABLE
-AS $$
-    SELECT child.id, child.state
-      FROM pm.issues AS child
-     WHERE child.parent_id = p_issue_id
-       AND child.state NOT IN ('done', 'discarded')
-     ORDER BY child.id;
-$$;
-
-COMMENT ON FUNCTION pm.issue_open_children(uuid) IS
-    'Unmittelbare Kindvorgänge von p_issue_id, die weder done noch discarded '
-    'sind (§7.6, Regel 1: "kein Kindvorgang steht offen"). Nur die '
-    'unmittelbare Ebene: ein Kind kann selbst nur abgeschlossen werden, wenn '
-    'seine eigenen Kinder geschlossen sind — die Prüfung trägt also über die '
-    'ganze Tiefe, ohne rekursiv zu sein.';
 
 -- ---------------------------------------------------------------------
 -- Der Zustandswechsel selbst.
@@ -189,7 +211,6 @@ AS $$
 DECLARE
     v_issue          pm.issues%ROWTYPE;
     v_open_dependency uuid;
-    v_open_child      uuid;
 BEGIN
     -- Sperrt den Vorgang für die Dauer der Transaktion. Ohne sie könnten
     -- zwei gleichzeitige Aufrufe denselben Ausgangszustand lesen, beide ihre
@@ -253,9 +274,20 @@ BEGIN
             USING ERRCODE = '23514';
     END IF;
 
-    -- 4. Abschluss (Regel 1): erfüllte Kriterien und keine offenen Kinder.
-    --    Nur für done — discarded ist kein Abschluss, sondern die
-    --    Feststellung, dass die Arbeit nicht ausgeführt wird.
+    -- 4. Abschluss (Regel 1): erfüllte Kriterien. Nur für done — discarded
+    --    ist ebenfalls beendet, aber ohne festgestellten Abschluss.
+    --
+    --    Dass kein Kindvorgang offen steht, prüft diese Funktion NICHT: Das
+    --    ist Regel 20, eine Invariante über den Tabellenstand, und sie liegt
+    --    im verzögerten Constraint-Trigger issues_enforce_ended_parent aus
+    --    013. Eine zusätzliche Sofortprüfung hier würde den von §7.6,
+    --    Regel 20 ausdrücklich erlaubten Fall abweisen, Eltern- und
+    --    Kindvorgang in derselben Schreibtransaktion zu beenden:
+    --
+    --      BEGIN;
+    --        E -> done    Zwischenstand verletzt Regel 20
+    --        T -> done    Endstand hält sie ein
+    --      COMMIT;        zulässig
     IF p_target_state = 'done' THEN
         IF jsonb_path_exists(v_issue.criteria, '$[*] ? (@.stand != "fulfilled")') THEN
             RAISE EXCEPTION
@@ -264,10 +296,10 @@ BEGIN
                 USING ERRCODE = '23514';
         END IF;
 
-        -- Vor der Prüfung auf offene Kinder: ein Epos ohne jede Zerlegung
-        -- erfüllt "kein Kind steht offen" zwar leer, aber sein Abschluss
-        -- folgt laut Regel 5 aus den Kindern — ohne Kinder gibt es nichts,
-        -- woraus er folgen könnte.
+        -- Regel 5: Ein Epos ohne Kinder verletzt Regel 20 nicht. Für den
+        -- Abschluss muss es aber mindestens ein Kind besitzen, weil sein
+        -- Abschluss aus den Kindern folgt. Das ist eine Übergangsbedingung
+        -- nach done, keine Invariante.
         IF v_issue.issue_kind = 'epic'
            AND NOT EXISTS (
                SELECT 1
@@ -280,23 +312,24 @@ BEGIN
                 p_issue_id
                 USING ERRCODE = '23514';
         END IF;
-
-        SELECT issue_id INTO v_open_child
-          FROM pm.issue_open_children(p_issue_id) LIMIT 1;
-
-        IF v_open_child IS NOT NULL THEN
-            RAISE EXCEPTION
-                'Vorgang % kann nicht abgeschlossen werden: Kindvorgang % steht offen',
-                p_issue_id, v_open_child
-                USING ERRCODE = '23514';
-        END IF;
     END IF;
 
-    -- 5. Zustand und Zeitpunkte. Ein endgültiger Zustand ist nicht wieder
-    --    verlassbar (siehe Übergangstabelle), deshalb braucht finished_at
-    --    keinen Rücksetzweg. started_at wird nur beim ERSTEN Erreichen von
-    --    in_progress gesetzt; ein Rückweg über blocked oder in_review ändert
-    --    den Beginn nicht.
+    -- 5. Zustand und Zeitpunkte.
+    --
+    --    finished_at (Regel 18) nennt die GEGENWÄRTIG wirksame Beendigung,
+    --    nicht jede frühere: gesetzt beim Wechsel nach done oder discarded,
+    --    entfernt bei jedem anderen Ziel. Der Rücksetzweg wird gebraucht,
+    --    seit discarded nicht mehr endgültig ist — ohne ihn schlüge
+    --    discarded -> clarification am finished_at-Verbot aus 013 fehl.
+    --    Einen vorhandenen finished_at kann das ELSE nur beim Rückweg aus
+    --    discarded entfernen; in allen anderen nicht beendeten
+    --    Ausgangszuständen ist finished_at bereits NULL. Das Entfernen am
+    --    Vorgang darf die frühere Beendigung nicht aus der Historie verlieren
+    --    lassen; die dafür noch fehlenden Zustandsangaben im Verlauf sind die
+    --    offene P-010-Lücke.
+    --
+    --    started_at wird nur beim ERSTEN Erreichen von in_progress gesetzt;
+    --    spätere Rückwege oder Seitenwechsel ändern den Beginn nicht.
     UPDATE pm.issues
        SET state          = p_target_state,
            blocker_reason = CASE
@@ -312,7 +345,7 @@ BEGIN
            finished_at    = CASE
                                 WHEN p_target_state IN ('done', 'discarded')
                                 THEN statement_timestamp()
-                                ELSE finished_at
+                                ELSE NULL
                             END
      WHERE id = p_issue_id;
 
@@ -331,9 +364,13 @@ COMMENT ON FUNCTION pm.transition_issue(uuid, text, jsonb, jsonb, jsonb) IS
     'Einziger fachlicher Schreibweg für pm.issues.state (§7.6). Prüft den '
     'Übergang gegen pm.issue_state_transitions, verlangt einen Blockadegrund '
     'für blocked, setzt die Abhängigkeitsschranke (Regel 12) mit begründeter '
-    'Übergehung durch und sperrt den Abschluss bei unerfüllten Kriterien, '
-    'offenen Kindern oder einem Epos ohne Kind (Regeln 1 und 5). Zustand, '
-    'Zeitpunkte und Zustandsverlauf (P-010) werden atomar fortgeschrieben.';
+    'Übergehung durch und sperrt den Abschluss bei unerfüllten Kriterien '
+    'oder einem Epos ohne Kind (Regeln 1 und 5). Zustand, Zeitpunkte und '
+    'Zustandsverlauf (P-010) werden atomar fortgeschrieben. Regel 20 (kein '
+    'offenes Kind unter einem beendeten Elternvorgang) prüft dagegen der '
+    'verzögerte Constraint-Trigger aus 013, weil sie eine Invariante über '
+    'den Tabellenstand ist und ihre Verletzung auch ohne Zustandswechsel '
+    'entstehen kann.';
 
 REVOKE ALL ON FUNCTION pm.transition_issue(uuid, text, jsonb, jsonb, jsonb) FROM PUBLIC;
 
@@ -343,10 +380,7 @@ GRANT EXECUTE ON FUNCTION pm.transition_issue(uuid, text, jsonb, jsonb, jsonb)
 GRANT SELECT ON pm.issue_state_transitions TO editor, reader;
 
 REVOKE ALL ON FUNCTION pm.issue_open_dependencies(uuid) FROM PUBLIC;
-REVOKE ALL ON FUNCTION pm.issue_open_children(uuid) FROM PUBLIC;
-
 GRANT EXECUTE ON FUNCTION pm.issue_open_dependencies(uuid) TO editor, reader;
-GRANT EXECUTE ON FUNCTION pm.issue_open_children(uuid) TO editor, reader;
 
 -- ---------------------------------------------------------------------
 -- Umgehungsweg schließen: finished_at ist ausschließlich Folge des
