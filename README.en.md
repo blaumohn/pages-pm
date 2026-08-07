@@ -31,8 +31,8 @@
 ## Introduction
 
 **Pages PM is a small, self-hosted project management system in which
-issues, decisions, and governing documents live in one shared,
-PostgreSQL-validated store — for people, command lines, and AI agents.**
+issues and documents live in one shared, PostgreSQL-validated store — for
+people, command lines, and AI agents.**
 
 ```text
 Not Pages PM
@@ -45,16 +45,17 @@ Three places, three states, connections only in prose.
 
 With Pages PM
 
-Issue #9e2b --implements--> Decision #8c21
-Policy #4d1a governs its completion
-depends_on #4c19 is checked before "in progress"
+implemented  Issue #4c19 --depends_on--> Issue #9e2b
+  → checked before #4c19 moves to "in progress"
+
+not yet implemented  Issue #9e2b --implements--> KEP-Lite #8c21
+  Policy #4d1a · scope: all issues
 ```
 
 > **Status:** The PostgreSQL foundation and the first issue path are
 > implemented and tested, including the specification's current issue
-> transitions. Next comes `pm.objects`. The path to the first go-live is
-> [further below](#8-path-to-the-first-go-live). The examples below show
-> the intended interplay, not the current state.
+> transitions. The next product capability is `pm.objects`. The path to the
+> first go-live is [further below](#8-path-to-the-first-go-live).
 
 ## 1. What I was looking for — and what Pages PM makes of it
 
@@ -65,17 +66,17 @@ the completion rule in a repository. To understand why an issue may be
 closed, the team has to open several places and reconstruct the connection
 itself.
 
-**Pages PM:** Issues, decisions, and governing documents live in one shared
-store, connected through typed relations — a wrong connection is a bug, not
-an opinion.
+**Pages PM:** Issues and documents live in one shared store. Relations
+between objects are typed and validated; a policy carries its own scope.
 
 ```text
-#9e2b --implements--> #8c21
-Policy #4d1a governs the completion of #9e2b
+not yet implemented  #9e2b --implements--> KEP-Lite #8c21
+  Policy #4d1a · scope: all issues
 ```
 
 [Why Pages PM connects these stores](product_spec.md#02-warum) ·
-[Typed relations](product_spec.md#p-008--typisierte-beziehungen-muss)
+[Typed relations](product_spec.md#p-008--typisierte-beziehungen-muss) ·
+[Policy](product_spec.md#79-richtlinie)
 
 ### Small tools are too weak, large ones too heavy
 
@@ -83,19 +84,20 @@ Policy #4d1a governs the completion of #9e2b
 dependencies. Larger systems can model that structure, but demand more
 setup and operations in return.
 
-**Pages PM:** It adopts only the structure small projects actually need
-validated: issues, embedded steps, sub-issues, dependencies, and document
+**Pages PM:** It keeps the structure coarse enough that small teams can
+maintain it over time: issues, sub-issues, dependencies, and document
 templates added on demand.
 
 ```text
 Sub-issue
-→ its own state and its own accountability
-
-Step
-→ part of an issue, no identity of its own
+→ an issue of its own, with its own state and its own short ID
 
 depends_on
-→ one issue waits for another to complete, checked
+→ a directed dependency between issues
+
+Dependency graph
+→ derivable from depends_on relations,
+  not a separately maintained step list
 ```
 
 [Resolution boundary](product_spec.md#p-014--auflösungsgrenze-muss-nicht-prüfbar) ·
@@ -175,10 +177,8 @@ it, and from then on maintained under the same rules as new content.
 
 The full walkthrough with real short IDs and timestamps is in the
 [product specification, §0.5](product_spec.md#05-ein-fall-von-anfang-bis-ende)
-(German only). ADR and policy are not yet implemented as domain tables; the
-issue itself, including its controlled state transition, is implemented. The
-examples above show the intended interplay that every upcoming migration is
-checked against.
+(German only). KEP-Lite, ADR, and policy are not yet implemented as domain
+tables; the issue, including its controlled state transition, is implemented.
 
 ## 2. What Pages PM deliberately is not
 
@@ -200,7 +200,7 @@ checked against.
 |---|---|---|
 | **Agents** | Tracker API: network, token, rate limit per query. | Local SQL; an agent reads the whole store in one query. |
 | **Cost** | Per-seat pricing, even for occasional viewing. | Postgres in a container. |
-| **Documentation** | The tracker runs issues, the wiki runs prose — the two drift apart. | Policy, ADR, and spec are domain objects of their own, validated and connected (§8). |
+| **Documentation** | The tracker runs issues, the wiki runs prose — the two drift apart. | Policy, ADR, and spec are domain objects of their own in the same validated store — not yet implemented as domain tables. |
 
 Nine existing tools were reviewed on July 27, 2026 (Appendix D of the
 specification). **If you only need sprints and issues, use Plane.** Pages PM
@@ -254,6 +254,7 @@ PostgREST, a web UI, and a general write API are not part of the MVP.
 | `011_project_area_state.sql` | State for projects and areas, plus scope mode for projects (§7.4); blocks new assignments to closed projects |
 | `012_state_history.sql` | Shared, append-only-in-effect foundation for the state history per P-010 across all registered domain objects |
 | `013_issues.sql` | Issue (§7.6) as the first domain type implemented in the authoritative working tree: `pm.issues`, required fields from *ready* onwards, the schema of completion criteria, an acyclic hierarchy with permitted parent/child types, the requirement that parent and child issue belong to the same project, plus the `depends_on` endpoint issue → issue. `editor` may not change the state directly. |
+| `014_issue_transitions.sql` | Controlled issue state transition (§7.6): a queryable transition table, `pm.transition_issue()` as the closed write path for state changes, the dependency barrier with a justified override, epic completion only with at least one child, the completion block on unmet completion criteria, plus `finished_at` and the history entry in the same transaction |
 
 `project/` supplements this concrete Pages PM installation with languages,
 relation types (`derived_from`, `implements`, `references`, `depends_on`),
@@ -336,7 +337,7 @@ migrations/       versioned SQL migrations (001_bootstrap.sql, 002_..., ...)
 project/          Pages PM-specific project configuration (languages, relation types, project structure)
 tests/sql/        pgTAP tests grouped by the migration or subsystem they cover
 docker/           test-only Postgres+pgTAP image
-scripts/          test-sql.sh (automated test run)
+scripts/          test-sql.sh (automated test run), check-references.sh (reference check)
 compose.yaml      local development database
 compose.test.yaml disposable test database
 ```

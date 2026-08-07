@@ -11,7 +11,7 @@ trägt deshalb die Angaben, die sie dort verlangt (§7.3).
 | **Projekt** | Pages PM |
 | **Zustand** | *gültig* |
 | **Pflege** | Dani (Mensch) |
-| **Ist-Stichtag** | Arbeitsbaum von `../pages-pm` am 2. August 2026 (`fabac88`) |
+| **Ist-Stichtag** | Arbeitsbaum von `../pages-pm` am 7. August 2026 (`f391eea`) |
 | **Zielgruppe** | kleine Teams, eine bis fünf aktiv mitarbeitende Personen |
 
 ---
@@ -20,8 +20,9 @@ trägt deshalb die Angaben, die sie dort verlangt (§7.3).
 
 ### 0.1 Was Pages PM ist
 
-Pages PM führt die Steuerungs- und Nachweisdaten kleiner Softwareprojekte in
-einer PostgreSQL-Datenbank und veröffentlicht sie als statisches Markdown.
+Pages PM führt die Steuerungs- und Nachweisdaten von Softwareprojekten kleiner
+Teams in einer PostgreSQL-Datenbank und veröffentlicht sie als statisches
+Markdown.
 
 Es führt **nicht** den Inhalt der Arbeit – kein Code, keine Gespräche, keine
 Kopie fremder Systeme –, sondern die Aussagen, mit denen man Arbeit steuert und
@@ -152,8 +153,8 @@ und Prüfung in ein Zustandsfeld legt, verliert diese zehn Tage – und liest
 
 ## 1. Zweck und Geltungsbereich
 
-Pages PM setzt bewährte Projektmanagementpraxis für kleine, agile oder hybride
-Softwareprojekte in ein zusammenhängendes Produktmodell um.
+Pages PM setzt bewährte Projektmanagementpraxis für kleine Teams in agilen oder
+hybriden Softwareprojekten in ein zusammenhängendes Produktmodell um.
 
 Diese Spezifikation legt fest, **welche fachlichen Gegenstände es gibt, woraus
 sie bestehen, in welchen Zuständen sie sein können und wie sie zusammenhängen.**
@@ -3495,10 +3496,10 @@ Pages-PM-Gegenstand (P-014, Anhang A.6).
 | Projekte und Hierarchie sind vorhanden. | P-002 | `parent(Pages PM)=Kashasaga` | Hierarchie und Projektzustand umgesetzt und getestet |
 | Bereiche erlauben Mehrfachzuordnung. | P-003 | `areas(X)={build,deploy}` | Mehrfachzuordnung und Bereichszustand umgesetzt und getestet |
 | Externe Herkunft besitzt Quelle, Fundstelle und Ausschnitt. | P-006 | `origin(X)=jira:J01-1#comment:4` | vollständig umgesetzt |
-| Beziehungsarten besitzen Richtung, Endpunktregeln und Zyklenprüfung je Art. | P-008, §8.1 | `derived_from` sowie `depends_on` mit Vorgang → Vorgang sind konfiguriert | `documents` ist zu entfernen; die Zustandswechselschranke von `depends_on` fehlt noch |
+| Beziehungsarten besitzen Richtung, Endpunktregeln und Zyklenprüfung je Art. | P-008, §8.1 | `derived_from` sowie `depends_on` mit Vorgang → Vorgang sind konfiguriert | umgesetzt und getestet; die Abhängigkeitsschranke mit begründeter Übergehung wird als Regel 12 durch `pm.transition_issue()` durchgesetzt |
 | Fachgegenstände erhalten innere Kennung und Fachart. | P-001 | Registrierung über die Fachtabelle | Registrierung mit UUID und Fachart umgesetzt und getestet |
 | Jeder registrierte Fachgegenstand erhält eine Kurzkennung. | P-001, §7.4 | `#a7k2` löst den zugeordneten Gegenstand auf oder nach dessen Löschung keinen | automatische Vergabe, eindeutige Zuordnung und dauerhafte Nichtwiedervergabe umgesetzt und getestet |
-| Zustandsverlaufseinträge können nur ergänzend fortgeschrieben werden. | P-010 | `pm.state_history` führt Sequenz, Zeitpunkt, Akteur, Ereignisart und Pflichtgrund | Nur ergänzbarer Speicher und geschützter Schreibweg umgesetzt; die atomare Verbindung mit dem fachlichen Zustandswechsel fehlt (§10.2) |
+| Zustandsverlaufseinträge können nur ergänzend fortgeschrieben werden. | P-010 | `pm.state_history` führt Sequenz, Zeitpunkt, Akteur, Ereignisart und Pflichtgrund | nur ergänzbarer Speicher, geschützter Schreibweg und atomare Verbindung mit dem Vorgangszustandswechsel umgesetzt; Ausgangs- und Zielzustand eines Zustandswechsels fehlen noch |
 
 **Der einzige Punkt im Reifegrad *aktuell*:**
 

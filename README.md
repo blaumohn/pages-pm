@@ -30,9 +30,8 @@
 ## Einleitung
 
 **Pages PM ist eine kleine, selbst betreibbare Projektverwaltung, in der
-Vorgänge, Entscheidungen und geltende Dokumente als ein gemeinsamer, von
-PostgreSQL geprüfter Bestand geführt werden – für Menschen, Kommandozeilen
-und KI-Agenten.**
+Vorgänge und Dokumente als ein gemeinsamer, von PostgreSQL geprüfter Bestand
+geführt werden – für Menschen, Kommandozeilen und KI-Agenten.**
 
 ```text
 Nicht Pages PM
@@ -45,16 +44,17 @@ Drei Orte, drei Zustände, Verbindungen nur im Text.
 
 Mit Pages PM
 
-Vorgang #9e2b --implements--> Entscheidung #8c21
-Richtlinie #4d1a gilt für seinen Abschluss
-depends_on #4c19 wird vor „in Arbeit“ geprüft
+umgesetzt  Vorgang #4c19 --depends_on--> Vorgang #9e2b
+  → vor „in Arbeit“ von #4c19 geprüft
+
+noch nicht umgesetzt  Vorgang #9e2b --implements--> KEP-Lite #8c21
+  Richtlinie #4d1a · Geltungsbereich: alle Vorgänge
 ```
 
 > **Stand:** Die PostgreSQL-Grundlage und der erste Vorgangsweg sind umgesetzt
 > und getestet, einschließlich der aktuellen Vorgangsübergänge der Spezifikation.
-> Als Nächstes folgt `pm.objects`. Der Weg zum ersten Go-live steht
-> [weiter unten](#8-weg-zum-ersten-go-live). Die folgenden Beispiele zeigen das
-> vorgesehene Zusammenspiel, nicht den Ist-Zustand.
+> Als nächste Produktfunktion folgt `pm.objects`. Der Weg zum ersten Go-live
+> steht [weiter unten](#8-weg-zum-ersten-go-live).
 
 ## 1. Was ich gesucht habe – und was Pages PM daraus macht
 
@@ -65,17 +65,18 @@ Abschlussregel im Repository. Um zu verstehen, warum ein Vorgang
 abgeschlossen werden darf, muss das Team mehrere Orte öffnen und die
 Verbindung selbst herstellen.
 
-**Pages PM:** Vorgänge, Entscheidungen und geltende Dokumente stehen in einem
-gemeinsamen Bestand und werden durch typisierte Beziehungen verbunden — eine
-falsche Verbindung ist ein Fehler, keine Meinung.
+**Pages PM:** Vorgänge und Dokumente stehen in einem gemeinsamen Bestand.
+Beziehungen zwischen Gegenständen sind typisiert und geprüft; eine Richtlinie
+führt ihren Geltungsbereich selbst.
 
 ```text
-#9e2b --implements--> #8c21
-Richtlinie #4d1a gilt für den Abschluss von #9e2b
+noch nicht umgesetzt  #9e2b --implements--> KEP-Lite #8c21
+  Richtlinie #4d1a · Geltungsbereich: alle Vorgänge
 ```
 
 [Warum Pages PM diese Bestände verbindet](product_spec.md#02-warum) ·
-[Typisierte Beziehungen](product_spec.md#p-008--typisierte-beziehungen-muss)
+[Typisierte Beziehungen](product_spec.md#p-008--typisierte-beziehungen-muss) ·
+[Richtlinie](product_spec.md#79-richtlinie)
 
 ### Kleine Werkzeuge sind zu schwach, große zu aufwendig
 
@@ -83,19 +84,20 @@ Richtlinie #4d1a gilt für den Abschluss von #9e2b
 Abhängigkeiten oft weg. Umfangreichere Systeme können diese Struktur
 abbilden, verlangen dafür aber mehr Einrichtung und Betrieb.
 
-**Pages PM:** Es übernimmt nur die Struktur, die für kleine Projekte wirklich
-geprüft werden muss: Vorgänge, eingebettete Schritte, Untervorgänge,
-Abhängigkeiten und bedarfsgesteuert ergänzte Dokumentvorlagen.
+**Pages PM:** Es hält die Struktur so grob, dass kleine Teams sie dauerhaft
+führen können: Vorgänge, Untervorgänge, Abhängigkeiten und bedarfsgesteuert
+ergänzte Dokumentvorlagen.
 
 ```text
 Untervorgang
-→ eigener Zustand und eigene Verantwortung
-
-Schritt
-→ Bestandteil eines Vorgangs, keine eigene Kennung
+→ eigener Vorgang mit eigenem Zustand und eigener Kennung
 
 depends_on
-→ ein Vorgang wartet auf den Abschluss eines anderen, geprüft
+→ gerichtete Abhängigkeit zwischen Vorgängen
+
+Abhängigkeitsgraph
+→ aus depends_on-Beziehungen berechenbar,
+  keine eigene gepflegte Schrittliste
 ```
 
 [Auflösungsgrenze](product_spec.md#p-014--auflösungsgrenze-muss-nicht-prüfbar) ·
@@ -177,10 +179,8 @@ Inhalte fortgeschrieben.
 
 Der vollständige Ablauf mit echten Kurzkennungen und Zeitpunkten steht in der
 [Produktspezifikation, §0.5](product_spec.md#05-ein-fall-von-anfang-bis-ende).
-ADR und Richtlinie sind als Fachtabellen noch nicht umgesetzt; der Vorgang ist
-einschließlich seines kontrollierten Zustandswechsels vorhanden. Die Beispiele
-oben zeigen das vorgesehene Zusammenspiel, gegen das jede kommende Migration
-geprüft wird.
+KEP-Lite, ADR und Richtlinie sind als Fachtabellen noch nicht umgesetzt; der
+Vorgang einschließlich seines kontrollierten Zustandswechsels ist umgesetzt.
 
 ## 2. Was Pages PM bewusst nicht ist
 
@@ -202,7 +202,7 @@ geprüft wird.
 |---|---|---|
 | **Agenten** | Tracker-API: Netz, Token, Rate-Limit je Abfrage. | Lokales SQL, ein Agent liest den ganzen Bestand in einer Abfrage. |
 | **Kosten** | Preis je Sitz, auch für gelegentliches Nachsehen. | Postgres im Container. |
-| **Dokumentation** | Tracker führt Vorgänge, Wiki führt Text — beide driften auseinander. | Richtlinie, ADR und Spezifikation sind eigene Fachgegenstände, geprüft verbunden (§8). |
+| **Dokumentation** | Tracker führt Vorgänge, Wiki führt Text — beide driften auseinander. | Richtlinie, ADR und Spezifikation sind eigene Fachgegenstände im selben geprüften Bestand — als Fachtabellen noch nicht umgesetzt. |
 
 Neun bestehende Werkzeuge wurden am 27. Juli 2026 geprüft (Anhang D der
 Spezifikation). **Wer nur Sprints und Vorgänge braucht, nimmt Plane.** Pages
@@ -258,6 +258,7 @@ des MVP.
 | `011_project_area_state.sql` | Zustand für Projekt und Bereich sowie Umfangsangabe für Projekte (§7.4); sperrt neue Zuordnungen zu abgeschlossenen Projekten |
 | `012_state_history.sql` | Gemeinsame, nur ergänzbare Grundlage für den Zustandsverlauf nach P-010 über alle registrierten Fachobjekte |
 | `013_issues.sql` | Vorgang (§7.6) als erste technisch umgesetzte Fachart im maßgeblichen Arbeitsbaum: `pm.issues`, Pflichtschwellen ab *bereit*, Schema der Abschlusskriterien, zyklenfreie Hierarchie mit zulässigen Eltern-/Kindarten, Zugehörigkeit von Eltern- und Kindvorgang zu demselben Projekt sowie `depends_on`-Endpunkt Vorgang → Vorgang. `editor` darf den Zustand nicht unmittelbar ändern. |
+| `014_issue_transitions.sql` | Kontrollierter Zustandswechsel des Vorgangs (§7.6): abfragbare Übergangstabelle, `pm.transition_issue()` als geschlossener Schreibweg für Zustandswechsel, Abhängigkeitsschranke mit begründeter Übergehung, Epos-Abschluss nur bei mindestens einem Kind, Abschlusssperre bei unerfüllten Abschlusskriterien sowie `finished_at` und Verlaufseintrag in derselben Transaktion |
 
 `project/` ergänzt die konkrete Pages-PM-Installation um Sprachen,
 Beziehungsarten (`derived_from`, `implements`, `references`, `depends_on`)
@@ -343,7 +344,7 @@ migrations/       versionierte SQL-Migrationen (001_bootstrap.sql, 002_..., ...)
 project/          Pages-PM-spezifische Projektkonfiguration (Sprachen, Beziehungsarten, Projektstruktur)
 tests/sql/        pgTAP-Tests, gruppiert nach betroffener Migration/Teilsystem
 docker/           reines Test-Abbild Postgres+pgTAP
-scripts/          test-sql.sh (automatisierter Testlauf)
+scripts/          test-sql.sh (automatisierter Testlauf), check-references.sh (Verweisprüfung)
 compose.yaml      lokale Entwicklungsdatenbank
 compose.test.yaml Wegwerf-Testdatenbank
 ```
